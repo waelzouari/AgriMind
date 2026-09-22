@@ -1,27 +1,12 @@
-"""Typed result contracts local to the hardware adapter boundary."""
+"""Backward-compatible names for hardware adapter result types."""
 
-from typing import TypedDict
+from agrimind_edge.domain.sensors import (
+    AirReading as DHT22Reading,
+)
+from agrimind_edge.domain.sensors import (
+    PumpResult,
+    SoilReading,
+    TankReading,
+)
 
-
-class DHT22Reading(TypedDict):
-    temperature: float | None
-    humidity_air: float | None
-    error: str | None
-
-
-class SoilReading(TypedDict):
-    soil_humidity: float | None
-    soil_raw: int | None
-    error: str | None
-
-
-class TankReading(TypedDict):
-    distance_cm: float
-    water_level_cm: float
-    water_pct: float
-    error: str | None
-
-
-class PumpResult(TypedDict):
-    pump: bool
-    message: str
+__all__ = ["DHT22Reading", "PumpResult", "SoilReading", "TankReading"]

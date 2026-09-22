@@ -15,6 +15,9 @@ recovery receive the same attention as happy paths.
   schemas, command validation, state transitions, duration caps, mode policy,
   feedback classification, weather freshness, schedule evaluation, outbox
   deduplication, and clock edge cases.
+- Application boundary: deterministic fake sensors, adapter protocol
+  compatibility, partial failure, unavailable/invalid readings, stale
+  last-known values, recovery, UTC timestamps, and secret-safe structured logs.
 - Contract: JSON Schema examples and compatibility for MQTT envelopes.
 - Integration: fake hardware plus local Mosquitto; duplicate QoS 1 delivery;
   retained-command protection; disconnect/reconnect; SQLite restart recovery;

@@ -1,10 +1,52 @@
 # Edge hardware architecture
 
-## AGM-002 scope
+## Hardware adapter scope (AGM-002)
 
 This layer integrates the validated NexusGuard hardware drivers only. It does
 not contain MQTT, irrigation decision logic, schedules, cloud persistence, or
 user-interface behavior. Broader edge services belong to later tickets.
+
+## Sensor application boundary (AGM-004)
+
+`SensorService` depends on the small `AirSensorPort`, `SoilSensorPort`, and
+`TankSensorPort` capabilities. It reads every device independently and returns
+an internal `SensorSnapshot`; it does not construct MQTT telemetry, persist
+data, make irrigation decisions, or control the pump. Wire-contract conversion
+belongs at a later transport boundary.
+
+Each measurement carries its unit, UTC observation time, quality, and a typed
+error when degraded. Quality has these precise meanings:
+
+- `valid`: a finite, range-valid value was observed during this capture;
+- `unavailable`: the adapter reported an error before any valid value existed;
+- `failed`: the port raised unexpectedly before any valid value existed;
+- `invalid`: the adapter returned a missing, non-finite, or out-of-range value;
+- `stale`: the current read failed or was invalid, so the service retained the
+  last valid value and its original observation time.
+
+One sensor failure never prevents reads from the other sensors. Percentage
+values are validated from 0 through 100; raw ADC, distance, and water height
+must be non-negative. Tank measurements remain system state and are not
+agronomic ML features.
+
+The minimal `PumpPort` and its in-memory fake exist because AGM-004 requires
+real and fake actuator boundaries. They expose only the raw relay capability.
+They do not add a safety policy, command handler, schedule, or automatic
+irrigation behavior; those concerns begin with AGM-005, where every request
+must still pass Raspberry Pi safety rules.
+
+## Fake hardware and logs
+
+`adapters/fake/` contains deterministic scripted air, soil, and tank sensors,
+plus an in-memory pump. Scripts can represent valid readings, adapter-reported
+unavailability, exceptions, invalid values, and recovery without importing Pi
+libraries. Exhausting a script is an explicit error rather than hidden random
+behavior.
+
+The sensor service emits structured `sensor_read_degraded` and
+`sensor_recovered` records with sensor name, typed error code, and correlation
+ID. Raw exception text and configuration values are not logged, preventing
+device-library messages from leaking secrets or unstable details.
 
 ## Authoritative physical mapping
 
@@ -83,6 +125,14 @@ physical pump test must be supervised, begin with the water path secured, and
 verify HIGH/OFF before allowing a LOW/ON command. No automated test suite may
 instantiate the real pump factory.
 
+For a supervised AGM-004 sensor smoke test, construct the real adapters from
+the validated `HardwareConfig`, inject them into `SensorService`, and capture
+several snapshots. Verify UTC timestamps and plausible values, then disconnect
+one sensor and confirm the other readings remain valid while the affected
+measurements become `stale` (after a prior success) or `unavailable`/`failed`.
+Reconnect it and confirm a `sensor_recovered` record and fresh values. This is
+a manual procedure only; no physical result is claimed by AGM-004 CI.
+
 ## Legacy `app.py`
 
 The inspected NexusGuard `app.py` is a Flask/Socket.IO local dashboard and
@@ -101,7 +151,10 @@ from the dedicated driver modules; automatic decision logic from legacy
 `pytest` supplies scripted DHT/ADC values, a scripted clock, and fake GPIO.
 Coverage includes calibration bounds, averaging/timing, retry/error handling,
 ultrasonic timing/timeout/calculation, active-low output, safe initialization
-and cleanup, and configuration rejection. Run the complete foundation suite:
+and cleanup, and configuration rejection. AGM-004 additionally covers port
+compatibility, deterministic fakes, complete and partial snapshots, invalid
+values, stale fallback, recovery, UTC validation, structured safe logs, and
+imports without GPIO. Run the complete foundation suite:
 
 ```bash
 make check

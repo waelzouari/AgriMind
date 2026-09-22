@@ -1,0 +1,21 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agrimind.example/contracts/v1/device-status.schema.json",
+  "title": "AgriMind v1 device status",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "message_id", "farm_id", "device_id", "online", "pump_state", "health", "recorded_at", "uptime_seconds", "firmware_version", "errors"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "message_id": {"type": "string", "format": "uuid"},
+    "farm_id": {"type": "string", "format": "uuid"},
+    "device_id": {"type": "string", "format": "uuid"},
+    "online": {"type": "boolean"},
+    "pump_state": {"type": "boolean"},
+    "health": {"enum": ["healthy", "degraded", "fault"]},
+    "recorded_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "uptime_seconds": {"type": "integer", "minimum": 0},
+    "firmware_version": {"type": "string", "minLength": 1, "maxLength": 64},
+    "errors": {"type": "array", "maxItems": 16, "items": {"type": "string", "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$", "maxLength": 64}}
+  }
+}

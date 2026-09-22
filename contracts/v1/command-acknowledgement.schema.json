@@ -1,0 +1,23 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agrimind.example/contracts/v1/command-acknowledgement.schema.json",
+  "title": "AgriMind v1 command acknowledgement",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "acknowledgement_id", "command_id", "farm_id", "device_id", "status", "occurred_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "acknowledgement_id": {"type": "string", "format": "uuid"},
+    "command_id": {"type": "string", "format": "uuid"},
+    "farm_id": {"type": "string", "format": "uuid"},
+    "device_id": {"type": "string", "format": "uuid"},
+    "status": {"enum": ["accepted", "rejected", "completed", "failed"]},
+    "occurred_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "reason_code": {"type": "string", "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$", "maxLength": 64},
+    "pump_state": {"type": "boolean"}
+  },
+  "allOf": [
+    {"if": {"properties": {"status": {"enum": ["rejected", "failed"]}}}, "then": {"required": ["reason_code"]}},
+    {"if": {"properties": {"status": {"enum": ["accepted", "completed"]}}}, "then": {"not": {"required": ["reason_code"]}}}
+  ]
+}

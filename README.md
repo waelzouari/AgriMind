@@ -25,6 +25,7 @@ make check
 - [MQTT contract](docs/mqtt/topics.md)
 - [Testing strategy](docs/testing/testing-strategy.md)
 - [Development conventions](docs/development.md)
+- [Runtime configuration](docs/configuration.md)
 - [Contributing workflow](CONTRIBUTING.md)
 
 ## Scope guardrail

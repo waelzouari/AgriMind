@@ -1,5 +1,6 @@
 """Hardware-independent domain models."""
 
+from agrimind_edge.domain.pump import AutomaticStopResult, PumpDecisionCode, PumpState
 from agrimind_edge.domain.sensors import (
     AirReading,
     Measurement,
@@ -14,8 +15,11 @@ from agrimind_edge.domain.sensors import (
 
 __all__ = [
     "AirReading",
+    "AutomaticStopResult",
     "Measurement",
+    "PumpDecisionCode",
     "PumpResult",
+    "PumpState",
     "ReadingQuality",
     "SensorError",
     "SensorErrorCode",

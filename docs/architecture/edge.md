@@ -48,6 +48,69 @@ The sensor service emits structured `sensor_read_degraded` and
 ID. Raw exception text and configuration values are not logged, preventing
 device-library messages from leaking secrets or unstable details.
 
+## Safe pump command boundary (AGM-005)
+
+The local path is deliberately transport-independent:
+
+```text
+validated PumpCommand -> PumpCommandHandler -> SafePumpController
+                      -> PumpPort -> active-low hardware adapter
+```
+
+MQTT clients will be authenticated and topics cross-checked by later transport
+work. At this boundary, a structurally valid command is still not authority to
+actuate: its farm and device must match the locally provisioned identity, it
+must be current, and an `on` duration must not exceed the local safety limit.
+`requested_by` remains audit metadata, not authentication proof.
+
+The AGM-005 controller exposes the minimum observable state required by this
+capability:
+
+```mermaid
+stateDiagram-v2
+    [*] --> OFF
+    OFF --> RUNNING: ON succeeds and auto-stop is scheduled
+    RUNNING --> OFF: OFF or automatic timeout succeeds
+    OFF --> OFF: idempotent OFF
+    OFF --> FAULT: fail-safe OFF cannot be confirmed
+    RUNNING --> FAULT: stop and fail-safe retry both fail
+    FAULT --> OFF: explicit OFF recovery succeeds
+```
+
+Starting and stopping occur synchronously under a lock, so they are not exposed
+as durable states. `VERIFY_PENDING` belongs to later irrigation-result work.
+Command handling is serialized in-process; overlapping `on` commands are
+rejected and cannot replace the active timer. Cancelled timers carry a cycle
+identifier and cannot stop a later run.
+
+An accepted `on` acknowledgement is created only after the adapter reports ON
+and a bounded automatic stop is scheduled. The timeout emits a later
+`completed` or `failed` acknowledgement through an injected sink. `off` emits
+`completed` only after OFF is confirmed; already-OFF is a completed no-op.
+Actuation or scheduler exceptions produce `failed`, while policy decisions
+produce `rejected`. Stable snake-case reason codes are used instead of raw
+exception text.
+
+QoS 1 duplicates are handled using an in-memory map keyed by `command_id`.
+Exact duplicates replay the stored acknowledgement without physical actuation;
+reuse of an ID with changed command content is rejected. Completed automatic
+stop outcomes replace the earlier accepted outcome for subsequent replay.
+This bounded MVP cache does not survive a process restart; durable idempotency
+will be supplied by the later SQLite event/outbox ticket.
+
+The v1 wire contract permits 1-600 seconds. The local
+`AGRIMIND_PUMP_MAX_DURATION_SECONDS` must also be 1-600 and defaults to 600 so
+no unverified agronomic limit is invented. Requests above the configured local
+limit are rejected, never silently clamped. Contract parsing rejects missing,
+zero, negative, or wire-oversized durations before this handler is called.
+
+Every actuation/timer failure attempts OFF. If the initial operation fails but
+the OFF retry succeeds, the acknowledgement remains `failed` and explicitly
+reports the recovered OFF state. If OFF cannot be confirmed, state becomes
+`fault` and no false physical-safety claim is made. Shutdown cancels the timer,
+forces OFF, then cleans up the adapter. No sensor threshold or agronomic rule
+is introduced; future safety interlocks can be placed before the controller.
+
 ## Authoritative physical mapping
 
 | Component | Verified configuration | Prototype behavior |
@@ -133,6 +196,14 @@ measurements become `stale` (after a prior success) or `unavailable`/`failed`.
 Reconnect it and confirm a `sensor_recovered` record and fresh values. This is
 a manual procedure only; no physical result is claimed by AGM-004 CI.
 
+For supervised AGM-005 validation, secure the water path and use a short local
+maximum. Confirm relay HIGH/OFF at boot, issue one bounded `on`, verify LOW/ON,
+then verify automatic HIGH/OFF at the deadline. Repeat with manual `off`, a
+duplicate command ID, an expired command, and a controlled process shutdown;
+only the first valid `on` may energize the relay. Record observations separately
+from CI. AGM-005 automated results use `FakePump` and do not claim this physical
+procedure was performed.
+
 ## Legacy `app.py`
 
 The inspected NexusGuard `app.py` is a Flask/Socket.IO local dashboard and
@@ -154,7 +225,9 @@ ultrasonic timing/timeout/calculation, active-low output, safe initialization
 and cleanup, and configuration rejection. AGM-004 additionally covers port
 compatibility, deterministic fakes, complete and partial snapshots, invalid
 values, stale fallback, recovery, UTC validation, structured safe logs, and
-imports without GPIO. Run the complete foundation suite:
+imports without GPIO. AGM-005 adds deterministic scheduler and pump tests for
+state transitions, bounded timeout, duplicates, target/expiry policy,
+overlapping commands, failure recovery, and shutdown. Run the complete suite:
 
 ```bash
 make check

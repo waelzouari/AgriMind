@@ -18,6 +18,10 @@ recovery receive the same attention as happy paths.
 - Application boundary: deterministic fake sensors, adapter protocol
   compatibility, partial failure, unavailable/invalid readings, stale
   last-known values, recovery, UTC timestamps, and secret-safe structured logs.
+- Pump safety boundary: explicit transitions, bounded automatic stop, manual
+  and idempotent OFF, duplicate replay, command-ID conflicts, wrong targets,
+  expiry/future timing, overlapping ON commands, timer isolation, actuator and
+  scheduler failures, safe retry, fault state, shutdown, and structured logs.
 - Contract: JSON Schema examples and compatibility for MQTT envelopes.
 - Integration: fake hardware plus local Mosquitto; duplicate QoS 1 delivery;
   retained-command protection; disconnect/reconnect; SQLite restart recovery;

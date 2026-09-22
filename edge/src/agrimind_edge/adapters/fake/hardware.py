@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections import deque
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Generic, TypeVar
 
 from agrimind_edge.domain.sensors import AirReading, PumpResult, SoilReading, TankReading
@@ -68,23 +68,37 @@ class FakeTankSensor:
 class FakePump:
     """In-memory raw relay fake; it deliberately has no safety policy."""
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        failures: Mapping[str, Iterable[Exception]] | None = None,
+    ) -> None:
         self.initialized = False
         self.active = False
         self.calls: list[str] = []
+        self._failures = {
+            operation: deque(exceptions) for operation, exceptions in (failures or {}).items()
+        }
+
+    def _maybe_fail(self, operation: str) -> None:
+        failures = self._failures.get(operation)
+        if failures:
+            raise failures.popleft()
 
     def initialize(self) -> None:
         self.calls.append("initialize")
+        self._maybe_fail("initialize")
         self.initialized = True
         self.active = False
 
     def get_state(self) -> bool:
+        self._maybe_fail("get_state")
         return self.active
 
     def turn_on(self) -> PumpResult:
         if not self.initialized:
             self.initialize()
         self.calls.append("turn_on")
+        self._maybe_fail("turn_on")
         self.active = True
         return {"pump": True, "message": "fake pump on"}
 
@@ -92,10 +106,12 @@ class FakePump:
         if not self.initialized:
             self.initialize()
         self.calls.append("turn_off")
+        self._maybe_fail("turn_off")
         self.active = False
         return {"pump": False, "message": "fake pump off"}
 
     def cleanup(self) -> None:
         self.calls.append("cleanup")
+        self._maybe_fail("cleanup")
         self.active = False
         self.initialized = False

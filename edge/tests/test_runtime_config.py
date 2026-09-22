@@ -27,6 +27,9 @@ def test_runtime_configuration_is_validated_and_composes_hardware() -> None:
     assert config.mqtt.tls_enabled is True
     assert config.mqtt.ca_file == Path("/etc/agrimind/certs/ca.pem")
     assert config.mqtt.contract_version == "v1"
+    assert config.pump_safety.farm_id == config.mqtt.farm_id
+    assert config.pump_safety.device_id == config.mqtt.device_id
+    assert config.pump_safety.max_duration_seconds == 600
     assert config.hardware.pump_relay_gpio == 18
 
 
@@ -50,6 +53,8 @@ def test_runtime_configuration_repr_redacts_secrets() -> None:
         ("AGRIMIND_MQTT_CA_FILE", "relative/ca.pem", "absolute path"),
         ("AGRIMIND_TELEMETRY_INTERVAL_SECONDS", "0", "between 1 and 3600"),
         ("AGRIMIND_CONTRACT_VERSION", "v2", "unsupported contract version"),
+        ("AGRIMIND_PUMP_MAX_DURATION_SECONDS", "0", "between 1 and 600"),
+        ("AGRIMIND_PUMP_MAX_DURATION_SECONDS", "601", "between 1 and 600"),
     ],
 )
 def test_invalid_runtime_configuration_fails_fast(name: str, value: str, message: str) -> None:

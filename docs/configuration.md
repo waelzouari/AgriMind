@@ -16,6 +16,7 @@ invalid. It composes the unchanged `HardwareConfig` from AGM-002.
 | `AGRIMIND_MQTT_CA_FILE` | required absolute path when TLS is enabled |
 | `AGRIMIND_TELEMETRY_INTERVAL_SECONDS` | integer 1-3600; default 5 |
 | `AGRIMIND_CONTRACT_VERSION` | exactly `v1` |
+| `AGRIMIND_PUMP_MAX_DURATION_SECONDS` | local limit 1-600; default 600; commands above it are rejected |
 | `AGRIMIND_GPIO_*`, ADS1115/calibration/tank values | validated by `HardwareConfig` |
 
 ## Secrets

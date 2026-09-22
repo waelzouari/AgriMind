@@ -9,6 +9,7 @@ from pathlib import Path
 from uuid import UUID
 
 from agrimind_edge.config.hardware import HardwareConfig
+from agrimind_edge.contracts.models import MAX_PUMP_DURATION_SECONDS
 from agrimind_edge.contracts.validation import TOPIC_VERSION, parse_uuid
 
 _HOST_PATTERN = re.compile(r"^[a-zA-Z0-9](?:[a-zA-Z0-9.-]{0,251}[a-zA-Z0-9])?$")
@@ -85,15 +86,33 @@ class MqttConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class PumpSafetyConfig:
+    """Local identity and duration limit enforced before pump actuation."""
+
+    farm_id: UUID
+    device_id: UUID
+    max_duration_seconds: int = MAX_PUMP_DURATION_SECONDS
+
+    def __post_init__(self) -> None:
+        if self.farm_id.int == 0 or self.device_id.int == 0:
+            raise ValueError("pump safety farm_id and device_id must be non-zero UUIDs")
+        if not 1 <= self.max_duration_seconds <= MAX_PUMP_DURATION_SECONDS:
+            raise ValueError(
+                f"pump maximum duration must be between 1 and {MAX_PUMP_DURATION_SECONDS} seconds"
+            )
+
+
+@dataclass(frozen=True, slots=True)
 class RuntimeConfig:
     mqtt: MqttConfig
+    pump_safety: PumpSafetyConfig
     credentials: MqttCredentials = field(repr=False)
     hardware: HardwareConfig = field(default_factory=HardwareConfig)
 
     def __repr__(self) -> str:
         return (
-            f"RuntimeConfig(mqtt={self.mqtt!r}, credentials={self.credentials!r}, "
-            f"hardware={self.hardware!r})"
+            f"RuntimeConfig(mqtt={self.mqtt!r}, pump_safety={self.pump_safety!r}, "
+            f"credentials={self.credentials!r}, hardware={self.hardware!r})"
         )
 
     @classmethod
@@ -126,6 +145,15 @@ class RuntimeConfig:
         )
         return cls(
             mqtt=mqtt,
+            pump_safety=PumpSafetyConfig(
+                farm_id=farm_id,
+                device_id=device_id,
+                max_duration_seconds=_integer(
+                    environment,
+                    "AGRIMIND_PUMP_MAX_DURATION_SECONDS",
+                    MAX_PUMP_DURATION_SECONDS,
+                ),
+            ),
             credentials=credentials,
             hardware=HardwareConfig.from_environment(environment),
         )

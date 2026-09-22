@@ -27,6 +27,9 @@ def test_runtime_configuration_is_validated_and_composes_hardware() -> None:
     assert config.mqtt.tls_enabled is True
     assert config.mqtt.ca_file == Path("/etc/agrimind/certs/ca.pem")
     assert config.mqtt.contract_version == "v1"
+    assert config.mqtt.keepalive_seconds == 60
+    assert config.mqtt.reconnect_min_seconds == 1
+    assert config.mqtt.reconnect_max_seconds == 60
     assert config.pump_safety.farm_id == config.mqtt.farm_id
     assert config.pump_safety.device_id == config.mqtt.device_id
     assert config.pump_safety.max_duration_seconds == 600
@@ -53,6 +56,9 @@ def test_runtime_configuration_repr_redacts_secrets() -> None:
         ("AGRIMIND_MQTT_CA_FILE", "relative/ca.pem", "absolute path"),
         ("AGRIMIND_TELEMETRY_INTERVAL_SECONDS", "0", "between 1 and 3600"),
         ("AGRIMIND_CONTRACT_VERSION", "v2", "unsupported contract version"),
+        ("AGRIMIND_MQTT_KEEPALIVE_SECONDS", "9", "between 10 and 3600"),
+        ("AGRIMIND_MQTT_RECONNECT_MIN_SECONDS", "0", "reconnect delays"),
+        ("AGRIMIND_MQTT_RECONNECT_MAX_SECONDS", "3601", "reconnect delays"),
         ("AGRIMIND_PUMP_MAX_DURATION_SECONDS", "0", "between 1 and 600"),
         ("AGRIMIND_PUMP_MAX_DURATION_SECONDS", "601", "between 1 and 600"),
     ],
@@ -70,4 +76,13 @@ def test_tls_requires_ca_file() -> None:
     environment["AGRIMIND_MQTT_CA_FILE"] = ""
 
     with pytest.raises(ValueError, match="CA file is required"):
+        RuntimeConfig.from_environment(environment)
+
+
+def test_reconnect_minimum_cannot_exceed_maximum() -> None:
+    environment = _environment()
+    environment["AGRIMIND_MQTT_RECONNECT_MIN_SECONDS"] = "30"
+    environment["AGRIMIND_MQTT_RECONNECT_MAX_SECONDS"] = "10"
+
+    with pytest.raises(ValueError, match="minimum <= maximum"):
         RuntimeConfig.from_environment(environment)

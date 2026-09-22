@@ -6,10 +6,13 @@ from agrimind_edge.adapters.fake.hardware import (
     FakeSoilSensor,
     FakeTankSensor,
 )
+from agrimind_edge.adapters.fake.mqtt import FakeDeviceStatusSource, FakeMqttTransport
 from agrimind_edge.adapters.fake.scheduling import FakeScheduledCall, FakeScheduler
 
 __all__ = [
     "FakeAirSensor",
+    "FakeDeviceStatusSource",
+    "FakeMqttTransport",
     "FakePump",
     "FakeScheduledCall",
     "FakeScheduler",

@@ -66,6 +66,9 @@ class MqttConfig:
     tls_enabled: bool = True
     ca_file: Path | None = None
     telemetry_interval_seconds: int = 5
+    keepalive_seconds: int = 60
+    reconnect_min_seconds: int = 1
+    reconnect_max_seconds: int = 60
     contract_version: str = TOPIC_VERSION
 
     def __post_init__(self) -> None:
@@ -77,6 +80,10 @@ class MqttConfig:
             raise ValueError("MQTT port must be between 1 and 65535")
         if not 1 <= self.telemetry_interval_seconds <= 3_600:
             raise ValueError("telemetry interval must be between 1 and 3600 seconds")
+        if not 10 <= self.keepalive_seconds <= 3_600:
+            raise ValueError("MQTT keepalive must be between 10 and 3600 seconds")
+        if not 1 <= self.reconnect_min_seconds <= self.reconnect_max_seconds <= 3_600:
+            raise ValueError("MQTT reconnect delays must satisfy 1 <= minimum <= maximum <= 3600")
         if self.contract_version != TOPIC_VERSION:
             raise ValueError(f"unsupported contract version: {self.contract_version}")
         if self.tls_enabled and self.ca_file is None:
@@ -134,6 +141,13 @@ class RuntimeConfig:
             ca_file=Path(ca_value) if ca_value else None,
             telemetry_interval_seconds=_integer(
                 environment, "AGRIMIND_TELEMETRY_INTERVAL_SECONDS", 5
+            ),
+            keepalive_seconds=_integer(environment, "AGRIMIND_MQTT_KEEPALIVE_SECONDS", 60),
+            reconnect_min_seconds=_integer(
+                environment, "AGRIMIND_MQTT_RECONNECT_MIN_SECONDS", 1
+            ),
+            reconnect_max_seconds=_integer(
+                environment, "AGRIMIND_MQTT_RECONNECT_MAX_SECONDS", 60
             ),
             contract_version=environment.get(
                 "AGRIMIND_CONTRACT_VERSION", TOPIC_VERSION

@@ -1,8 +1,44 @@
 # MQTT v1 wire contract
 
-Status: implemented by AGM-003 as transport-independent contracts. MQTT
-connections, publish/subscribe behavior, broker ACLs, QoS handling, retained
-messages, and LWT configuration belong to later tickets.
+Status: contracts were introduced by AGM-003. AGM-006 implements broker-neutral
+cloud connection, telemetry/status publication, verified TLS, LWT, bounded
+reconnect configuration, and device ACL design. Pump command subscription and
+durable offline buffering remain later work.
+
+## AGM-006 connection lifecycle
+
+```mermaid
+sequenceDiagram
+  participant E as Edge MQTT service
+  participant T as MQTT transport
+  participant B as Cloud broker
+
+  E->>T: Configure retained OFFLINE LWT (QoS 1)
+  E->>T: Connect asynchronously with TLS
+  T->>B: MQTT CONNECT + LWT
+  B-->>T: CONNACK
+  T-->>E: Connected callback
+  E->>B: Retained ONLINE status (QoS 1)
+  E->>B: Telemetry (QoS 1, not retained)
+  Note over T,B: Unexpected loss makes broker publish retained LWT
+  T-->>E: Disconnected callback
+  T->>B: Exponential reconnect, bounded by configuration
+  B-->>T: Successful CONNACK
+  T-->>E: Connected callback
+  E->>B: Refresh retained ONLINE status
+```
+
+The Paho adapter is confined to infrastructure. Application code depends on an
+`MqttTransport` port and receives only connected/disconnected callbacks. The
+adapter uses an asynchronous network loop, with reconnect delay starting at
+`AGRIMIND_MQTT_RECONNECT_MIN_SECONDS`, doubling between failed attempts, and
+capped at `AGRIMIND_MQTT_RECONNECT_MAX_SECONDS`. Broker loss changes connection
+state and suppresses new telemetry publication; it has no pump capability and
+cannot bypass AGM-005.
+
+Persistent telemetry buffering is deliberately excluded. While disconnected,
+new snapshots are counted as skipped and not queued. The later SQLite
+event/outbox ticket owns durable offline capture and replay.
 
 ## Common rules
 
@@ -34,7 +70,7 @@ agrimind/v1/farms/{farm_id}/devices/{device_id}/events/irrigation_result
 Topic farm/device IDs must equal the corresponding payload fields. That
 cross-check belongs to future MQTT handlers, not the message model alone.
 
-| Topic suffix | Direction | Purpose | Future QoS/retained |
+| Topic suffix | Direction | Purpose | QoS/retained |
 |---|---|---|---|
 | `telemetry/{metric}` | edge -> broker | One sensor measurement | QoS 1 / no |
 | `commands/pump` | trusted client -> edge | Request bounded ON or OFF | QoS 1 / never retained |
@@ -76,6 +112,21 @@ Example on `.../telemetry/soil_moisture`:
 
 Telemetry contains a raw measurement only. Agronomic recommendations, pump
 state, and tank-based safety decisions do not belong in this message.
+
+AGM-006 maps `SensorSnapshot` without changing that internal model:
+
+- fresh temperature, air humidity, soil moisture, and tank water height become
+  `valid` telemetry;
+- stale cached values become `estimated` and preserve their original UTC
+  observation time;
+- unavailable, invalid, and failed readings have no finite v1 value and are
+  omitted rather than fabricated;
+- tank telemetry uses water height in centimetres, never tank percentage as an
+  agronomic feature.
+
+Each mapped measurement is published to `TopicBuilder.telemetry(...)` with QoS
+1 and `retain=false`. QoS 1 means at-least-once transport delivery; it is not
+proof of persistence or application processing.
 
 ## Pump command
 
@@ -184,7 +235,70 @@ Example on `.../status/device`:
 | `errors` | string array | yes | up to 16 lowercase snake_case codes, max 64 each |
 
 Later MQTT work may use the same shape for heartbeat and LWT-derived offline
-state. AGM-003 does not configure LWT or publish status.
+state. AGM-006 configures the LWT before connecting and publishes current
+ONLINE status after every successful connection/reconnection. Both use the
+device-status topic, QoS 1, and `retain=true`, so consumers see the most recent
+presence state. A graceful stop first publishes retained OFFLINE and then
+disconnects; an unexpected session loss makes the broker publish the retained
+LWT.
+
+Because MQTT requires the will payload during CONNECT, its `recorded_at`, pump
+state, uptime, and health are a connection-time snapshot, not a measurement at
+the later instant of network loss. The LWT sets `online=false`, records
+`mqtt_session_lost`, and degrades otherwise-healthy status. It must not be used
+as an actuator command or proof of current physical pump state.
+
+## TLS and broker requirements
+
+The cloud adapter is broker-neutral and requires MQTT 3.1.1 over verified TLS:
+
+- a configured CA file is loaded into a default Python TLS context;
+- certificate validation and hostname checking remain enabled;
+- TLS 1.2 is the minimum accepted protocol;
+- username/password authentication is configured before connection and never
+  placed in topics, payloads, or logs;
+- no public broker, certificate, private key, or working credential is stored
+  in the repository.
+
+The broker must support QoS 1, retained publications, LWT, TLS with a trusted
+certificate matching the configured hostname, and per-client ACLs.
+
+## Device ACL design
+
+Authentication establishes which broker principal connected. Authorization is
+the separate broker policy that constrains that principal. Topic UUIDs alone
+are not authentication.
+
+For one provisioned `{farm_id}/{device_id}`, AGM-006 requires only exact publish
+permissions for:
+
+```text
+agrimind/v1/farms/{farm_id}/devices/{device_id}/telemetry/temperature
+agrimind/v1/farms/{farm_id}/devices/{device_id}/telemetry/humidity
+agrimind/v1/farms/{farm_id}/devices/{device_id}/telemetry/soil_moisture
+agrimind/v1/farms/{farm_id}/devices/{device_id}/telemetry/tank_level
+agrimind/v1/farms/{farm_id}/devices/{device_id}/status/device
+```
+
+AGM-006 grants no subscribe permission. A later command ticket may add only the
+exact `.../commands/pump` subscription after routing through the AGM-005 local
+handler. It must not add cross-farm access, `agrimind/#`, `+/devices/+`, or a
+broad device subtree. `DeviceAclPolicy` tests these vendor-neutral rules; the
+equivalent broker-specific syntax must be validated during deployment.
+
+## Supervised cloud validation
+
+With separately provisioned test credentials and a trusted CA, configure a
+non-production broker, observe LWT registration before CONNECT, and confirm the
+retained ONLINE status and four non-retained telemetry topics. Interrupt the
+network without graceful disconnect, verify the broker publishes retained
+OFFLINE, then restore connectivity and verify bounded reconnect plus refreshed
+ONLINE status. Attempt cross-device publishing and confirm the broker rejects
+it. Rotate/delete the test credentials afterward.
+
+This procedure was not run for AGM-006. Cloud MQTT behavior is validated
+through automated transport-boundary tests; real broker validation remains
+pending.
 
 ## Irrigation result
 

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agrimind.example/contracts/v1/telemetry.schema.json",
+  "title": "AgriMind v1 telemetry",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "message_id", "farm_id", "device_id", "metric", "value", "unit", "recorded_at", "quality"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "message_id": {"type": "string", "format": "uuid"},
+    "farm_id": {"type": "string", "format": "uuid"},
+    "device_id": {"type": "string", "format": "uuid"},
+    "metric": {"enum": ["soil_moisture", "temperature", "humidity", "tank_level"]},
+    "value": {"type": "number"},
+    "unit": {"enum": ["%", "°C", "cm"]},
+    "recorded_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "quality": {"enum": ["valid", "estimated"]}
+  },
+  "allOf": [
+    {"if": {"properties": {"metric": {"enum": ["soil_moisture", "humidity"]}}}, "then": {"properties": {"unit": {"const": "%"}}}},
+    {"if": {"properties": {"metric": {"const": "temperature"}}}, "then": {"properties": {"unit": {"const": "°C"}}}},
+    {"if": {"properties": {"metric": {"const": "tank_level"}}}, "then": {"properties": {"unit": {"const": "cm"}}}}
+  ]
+}

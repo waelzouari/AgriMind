@@ -1,0 +1,19 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agrimind.example/contracts/v1/irrigation-result.schema.json",
+  "title": "AgriMind v1 irrigation result",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "event_id", "farm_id", "device_id", "soil_moisture_before", "soil_moisture_after", "delta", "result", "completed_at"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "event_id": {"type": "string", "format": "uuid"},
+    "farm_id": {"type": "string", "format": "uuid"},
+    "device_id": {"type": "string", "format": "uuid"},
+    "soil_moisture_before": {"type": "number", "minimum": 0, "maximum": 100},
+    "soil_moisture_after": {"type": "number", "minimum": 0, "maximum": 100},
+    "delta": {"type": "number", "minimum": -100, "maximum": 100},
+    "result": {"enum": ["increased", "unchanged", "decreased"]},
+    "completed_at": {"type": "string", "format": "date-time", "pattern": "Z$"}
+  }
+}

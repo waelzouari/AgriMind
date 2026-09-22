@@ -1,0 +1,11 @@
+"""Application services and hardware-independent ports."""
+
+from agrimind_edge.application.ports import (
+    AirSensorPort,
+    PumpPort,
+    SoilSensorPort,
+    TankSensorPort,
+)
+from agrimind_edge.application.sensor_service import SensorService
+
+__all__ = ["AirSensorPort", "PumpPort", "SensorService", "SoilSensorPort", "TankSensorPort"]

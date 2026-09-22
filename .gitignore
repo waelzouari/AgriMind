@@ -1,0 +1,65 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+coverage.xml
+htmlcov/
+.venv/
+venv/
+*.egg-info/
+dist/
+build/
+
+# Flutter / Dart
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+mobile/build/
+mobile/.metadata
+
+# Supabase local state
+backend/supabase/.branches/
+backend/supabase/.temp/
+
+# AI datasets and generated artifacts
+ai/**/data/raw/
+ai/**/data/interim/
+ai/**/data/processed/
+ai/**/artifacts/*
+!ai/**/artifacts/.gitkeep
+*.joblib
+*.onnx
+*.pkl
+*.pt
+*.pth
+
+# Runtime data and logs
+*.db
+*.sqlite
+*.sqlite3
+*.log
+logs/
+data/
+
+# Editors and operating systems
+.DS_Store
+.idea/
+.vscode/
+*.swp
+
+# Local reports and scratch files
+tmp/
+reports/

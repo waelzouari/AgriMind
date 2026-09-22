@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from typing import Protocol, runtime_checkable
 
 from agrimind_edge.domain.sensors import AirReading, PumpResult, SoilReading, TankReading
@@ -35,3 +36,13 @@ class PumpPort(Protocol):
     def turn_off(self) -> PumpResult: ...
 
     def cleanup(self) -> None: ...
+
+
+class ScheduledCall(Protocol):
+    def cancel(self) -> None: ...
+
+
+class SchedulerPort(Protocol):
+    """Schedule a deferred callback without exposing a concrete timer."""
+
+    def schedule(self, delay_seconds: int, callback: Callable[[], None]) -> ScheduledCall: ...

@@ -10,6 +10,12 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
+hardware = [
+  "adafruit-blinka>=8.0",
+  "adafruit-circuitpython-ads1x15>=2.2.23",
+  "adafruit-circuitpython-dht>=3.7.8",
+  "RPi.GPIO>=0.7.1",
+]
 dev = [
   "detect-secrets>=1.5,<2",
   "mypy>=1.11,<2",

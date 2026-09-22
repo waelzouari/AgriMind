@@ -20,6 +20,7 @@ make check
 
 - [Discovery report](docs/planning/discovery-report.md)
 - [System architecture](docs/architecture/system-overview.md)
+- [Edge hardware architecture](docs/architecture/edge.md)
 - [Dependency-aware backlog](docs/planning/backlog.md)
 - [MQTT contract](docs/mqtt/topics.md)
 - [Testing strategy](docs/testing/testing-strategy.md)

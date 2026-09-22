@@ -28,15 +28,15 @@ Workflow: `status:blocked`, `needs:hardware`, `needs:decision`.
 | ID | Title | Pri | Milestone | Depends on |
 |---|---|---:|---|---|
 | AGM-001 | Repository foundation and architecture | P0 | M0 | - |
-| AGM-002 | Capture wire contracts and configuration model | P0 | M0 | AGM-001 |
-| AGM-003 | Integrate and characterize existing hardware drivers | P0 | M0 | AGM-001 |
+| AGM-002 | Integrate existing Raspberry Pi hardware drivers | P0 | M0 | AGM-001 |
+| AGM-003 | Capture wire contracts and configuration model | P0 | M0 | AGM-001, AGM-002 |
 | AGM-004 | Edge ports, fake hardware, and sensor service | P0 | M1 | AGM-002, AGM-003 |
-| AGM-005 | Safe pump state machine and local command handler | P0 | M1 | AGM-003, AGM-004 |
-| AGM-006 | Cloud MQTT connection, telemetry, LWT, and ACL design | P0 | M1 | AGM-002, AGM-004 |
+| AGM-005 | Safe pump state machine and local command handler | P0 | M1 | AGM-002, AGM-004 |
+| AGM-006 | Cloud MQTT connection, telemetry, LWT, and ACL design | P0 | M1 | AGM-003, AGM-004 |
 | AGM-007 | MQTT command acknowledgements and idempotent remote control | P0 | M1 | AGM-005, AGM-006 |
 | AGM-008 | SQLite event store, outbox, and 24-hour buffer | P0 | M1 | AGM-004 |
 | AGM-009 | Local Mosquitto fallback and explicit failover runbook | P0 | M1 | AGM-006, AGM-007, AGM-008 |
-| AGM-010 | Supabase schema migrations and constraints | P0 | M2 | AGM-001, AGM-002 |
+| AGM-010 | Supabase schema migrations and constraints | P0 | M2 | AGM-001, AGM-003 |
 | AGM-011 | Supabase Auth, RLS, Storage, and isolation tests | P0 | M2 | AGM-010 |
 | AGM-012 | Device registry and secure telemetry ingestion service | P0 | M2 | AGM-006, AGM-010, AGM-011 |
 | AGM-013 | Offline-to-cloud synchronization and deduplication | P0 | M3 | AGM-008, AGM-012 |
@@ -47,7 +47,7 @@ Workflow: `status:blocked`, `needs:hardware`, `needs:decision`.
 | AGM-018 | Manual irrigation mobile flow with acknowledgement UX | P0 | M2 | AGM-007, AGM-017 |
 | AGM-019 | Open-Meteo adapter, aggregation, caching, and freshness policy | P0 | M2 | AGM-016 |
 | AGM-020 | Weather UI and stale/offline states | P0 | M2 | AGM-014, AGM-019 |
-| AGM-021 | Irrigation dataset audit and versioned feature contract | P0 | M3 | AGM-002, AGM-019 |
+| AGM-021 | Irrigation dataset audit and versioned feature contract | P0 | M3 | AGM-003, AGM-019 |
 | AGM-022 | Irrigation baseline, split methodology, and evaluation | P0 | M3 | AGM-021 |
 | AGM-023 | Versioned local irrigation inference adapter | P0 | M3 | AGM-004, AGM-022 |
 | AGM-024 | AI automatic mode with independent edge safety gate | P0 | M3 | AGM-005, AGM-019, AGM-023 |
@@ -96,30 +96,27 @@ and CI configuration validation.
 Definition of Done: criteria pass, documentation is current, diff is
 self-reviewed, CI is green, and a PR targets `develop`.
 
-### AGM-002 - Capture wire contracts and configuration model
+### AGM-002 - Integrate existing Raspberry Pi hardware drivers
+
+Acceptance criteria:
+
+- Original DHT22, ADS1115 soil, HC-SR04, and active-low pump behavior is
+  preserved behind lazy hardware adapters.
+- Verified GPIO and calibration defaults are centralized and validated.
+- Ordinary package imports and automated tests require no Raspberry Pi or GPIO.
+- Pump initialization and cleanup force HIGH/OFF and are fake-GPIO tested.
+- Edge documentation records provenance, dependencies, calibration, physical
+  assumptions, Pi setup, and the legacy status of `app.py`.
+
+### AGM-003 - Capture wire contracts and configuration model
 
 Acceptance criteria:
 
 - Versioned JSON Schemas exist for telemetry, commands, acknowledgements,
   device status, and irrigation results.
 - Topic construction is centralized and uses lowercase versioned paths.
-- Command schema includes UUID, farm/device, issue/expiry times, and bounded
-  duration; invalid examples fail tests.
+- Command schema includes identity, issue/expiry times, and bounded duration.
 - Environment configuration validates at startup and redacts secrets in logs.
-- `.env.example` documents cloud and local broker modes without credentials.
-
-### AGM-003 - Integrate and characterize existing hardware drivers
-
-Acceptance criteria:
-
-- Original driver files are copied with provenance and behavior preserved.
-- Accepted GPIO/calibration map is documented and configurable.
-- Imports do not initialize hardware unexpectedly.
-- Driver-level tests use module fakes; supervised hardware checklist verifies
-  GPIO and active-low relay behavior.
-- Pump is forced OFF on initialization, cleanup, SIGTERM, and handled failure.
-- Tank measurements are not a critical interlock until physical calibration is
-  signed off.
 
 ### AGM-004 - Edge ports, fake hardware, and sensor service
 
@@ -158,16 +155,17 @@ Acceptance criteria:
 
 ## Implementation order and team parallelism
 
-After AGM-001/002 establish contracts, the three-person team can work in three
-lanes: edge (AGM-003-009), cloud/mobile (AGM-010-020), and AI/weather
+After AGM-002 integrates hardware and AGM-003 establishes contracts, the
+three-person team can work in three lanes: edge (AGM-004-009), cloud/mobile
+(AGM-010-020), and AI/weather
 (AGM-019, AGM-021-023). Integration gates are AGM-007 (physical vertical
 slice), AGM-018 (user-controlled vertical slice), AGM-025 (closed feedback
 loop), and AGM-026 (P0 reliability). P1 work starts only after AGM-026 passes.
 
-## Proposed start
+## Initial project start (completed)
 
 - First ticket: AGM-001.
 - First branch after approval: `feature/AGM-001-project-foundation`, based on
   `develop`.
-- Exact next action: review the contradictions/decisions in the discovery report
-  and approve AGM-001; then create the branches and implement only that ticket.
+- AGM-001 was approved and merged into `develop`; subsequent work follows the
+  ordered ticket sequence above.

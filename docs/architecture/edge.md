@@ -48,6 +48,18 @@ The sensor service emits structured `sensor_read_degraded` and
 ID. Raw exception text and configuration values are not logged, preventing
 device-library messages from leaking secrets or unstable details.
 
+## Cloud telemetry boundary (AGM-006)
+
+`SensorService` remains transport-independent. `TelemetryMapper` converts only
+the four approved snapshot measurements into AGM-003 wire contracts, and
+`CloudMqttService` publishes them through `MqttTransport`. The production Paho
+adapter owns TLS, credentials, LWT, the asynchronous network loop, and bounded
+reconnect configuration; tests replace it with `FakeMqttTransport`.
+
+MQTT code has no `PumpPort`, controller, GPIO import, or command subscription.
+Connection loss therefore cannot actuate the pump or weaken AGM-005. Telemetry
+is not persistently buffered in this ticket; SQLite outbox work remains later.
+
 ## Safe pump command boundary (AGM-005)
 
 The local path is deliberately transport-independent:

@@ -22,6 +22,11 @@ recovery receive the same attention as happy paths.
   and idempotent OFF, duplicate replay, command-ID conflicts, wrong targets,
   expiry/future timing, overlapping ON commands, timer isolation, actuator and
   scheduler failures, safe retry, fault state, shutdown, and structured logs.
+- MQTT boundary: snapshot mapping, v1 serialization/topics, QoS/retention,
+  verified TLS setup, LWT-before-connect ordering, ONLINE/OFFLINE status,
+  unavailable broker behavior, disconnect/reconnect recovery, partial publish
+  failure, exact-identity ACL policy, credential redaction, and no pump/GPIO
+  dependency using deterministic fakes rather than Internet access.
 - Contract: JSON Schema examples and compatibility for MQTT envelopes.
 - Integration: fake hardware plus local Mosquitto; duplicate QoS 1 delivery;
   retained-command protection; disconnect/reconnect; SQLite restart recovery;

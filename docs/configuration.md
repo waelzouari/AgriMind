@@ -15,6 +15,9 @@ invalid. It composes the unchanged `HardwareConfig` from AGM-002.
 | `AGRIMIND_MQTT_TLS_ENABLED` | `true` or `false`; default true |
 | `AGRIMIND_MQTT_CA_FILE` | required absolute path when TLS is enabled |
 | `AGRIMIND_TELEMETRY_INTERVAL_SECONDS` | integer 1-3600; default 5 |
+| `AGRIMIND_MQTT_KEEPALIVE_SECONDS` | integer 10-3600; default 60 |
+| `AGRIMIND_MQTT_RECONNECT_MIN_SECONDS` | integer 1-3600; default 1 |
+| `AGRIMIND_MQTT_RECONNECT_MAX_SECONDS` | integer from reconnect minimum through 3600; default 60 |
 | `AGRIMIND_CONTRACT_VERSION` | exactly `v1` |
 | `AGRIMIND_PUMP_MAX_DURATION_SECONDS` | local limit 1-600; default 600; commands above it are rejected |
 | `AGRIMIND_GPIO_*`, ADS1115/calibration/tank values | validated by `HardwareConfig` |
@@ -33,3 +36,8 @@ Supabase privileged credentials remain forbidden on Flutter and Raspberry Pi.
 
 The placeholders in `.env.example` are deliberately non-operational. Replace
 them only in an ignored local/runtime environment.
+
+The cloud adapter refuses to start when TLS is disabled or no CA path is
+present, even though `tls=false` remains available to separately scoped local
+test/demo adapters. Reconnect settings configure bounded exponential backoff;
+they are not application retry loops.

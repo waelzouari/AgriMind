@@ -34,7 +34,7 @@ void main() {
   });
 
   test('restoration failure fails closed without exposing exception', () async {
-    final secret = 'token-must-not-appear';
+    final secret = 'token-must-not-appear'; // pragma: allowlist secret
     final repository = FakeAuthenticationRepository()
       ..restoreError = StateError(secret);
     final controller = AuthenticationController(repository);
@@ -51,13 +51,19 @@ void main() {
     final controller = AuthenticationController(repository);
     await controller.restoreSession();
 
-    await controller.signIn(email: 'farmer@example.com', password: 'private');
+    await controller.signIn(
+      email: 'farmer@example.com',
+      password: 'private', // pragma: allowlist secret
+    );
     expect(controller.status, AuthenticationStatus.authenticated);
 
     repository.signInFailure = const AuthenticationFailure(
       AuthenticationFailureType.invalidCredentials,
     );
-    await controller.signIn(email: 'farmer@example.com', password: 'wrong');
+    await controller.signIn(
+      email: 'farmer@example.com',
+      password: 'wrong', // pragma: allowlist secret
+    );
     expect(controller.status, AuthenticationStatus.unauthenticated);
     expect(controller.errorMessage, contains('incorrect'));
     expect(controller.errorMessage, isNot(contains('wrong')));
@@ -72,11 +78,11 @@ void main() {
 
     final first = controller.signIn(
       email: 'farmer@example.com',
-      password: 'private',
+      password: 'private', // pragma: allowlist secret
     );
     final second = controller.signIn(
       email: 'farmer@example.com',
-      password: 'private',
+      password: 'private', // pragma: allowlist secret
     );
     expect(repository.signInCalls, 1);
     repository.signInCompleter!.complete(session);

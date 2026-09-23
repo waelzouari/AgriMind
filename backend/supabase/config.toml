@@ -1,0 +1,4 @@
+project_id = "agrimind"
+
+[db]
+major_version = 15

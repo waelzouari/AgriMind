@@ -111,6 +111,9 @@ hard duration and hardware safety limits.
 
 - Edge SQLite is the source of truth for not-yet-synchronized physical events.
 - Supabase is the durable user-facing history after acknowledged ingestion.
+- The Cloud schema relates Auth users to farms through memberships, then farms
+  to devices and canonical v1 event rows. Contract IDs are database
+  deduplication keys; RLS and ingestion are added by AGM-011/012.
 - MQTT is transport, never durable business storage.
 - The model recommendation is advisory input; the edge safety gate owns the
   final actuation decision.

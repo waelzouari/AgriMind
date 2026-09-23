@@ -82,7 +82,7 @@ def consumer(client: FakeClient, result: IngestionResult) -> PahoIngestionConsum
         port=8883,
         client_id="stable-ingestion-id",
         username="server-user",
-        password="server-password",
+        password="server-password",  # pragma: allowlist secret
         ca_file=Path("/absolute/ca.pem"),
         processor=Processor(result),
         client=client,
@@ -106,7 +106,7 @@ def test_default_client_uses_stable_id_and_persistent_session(
         port=8883,
         client_id="stable-ingestion-id",
         username="server-user",
-        password="server-password",
+        password="server-password",  # pragma: allowlist secret
         ca_file=Path("/absolute/ca.pem"),
         processor=Processor(IngestionResult(IngestionOutcome.INSERTED, "inserted")),
         ssl_context_factory=lambda **kwargs: FakeContext(),

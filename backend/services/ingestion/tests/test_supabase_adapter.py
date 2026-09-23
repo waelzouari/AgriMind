@@ -66,6 +66,6 @@ def test_ingestion_adapter_calls_only_the_restricted_rpcs() -> None:
 
 
 def test_supabase_client_repr_redacts_service_role() -> None:
-    secret = "service-role-must-not-leak"
+    secret = "service-role-must-not-leak"  # pragma: allowlist secret
     client = SupabaseRestClient("https://example.supabase.co", secret)
     assert secret not in repr(client)

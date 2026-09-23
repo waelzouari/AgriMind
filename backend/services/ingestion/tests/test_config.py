@@ -11,7 +11,7 @@ def environment() -> dict[str, str]:
         "AGRIMIND_INGESTION_MQTT_HOST": "mqtt.example.invalid",
         "AGRIMIND_INGESTION_MQTT_CLIENT_ID": "agrimind-ingestion-test",
         "AGRIMIND_INGESTION_MQTT_USERNAME": "server-user-secret",
-        "AGRIMIND_INGESTION_MQTT_PASSWORD": "server-password-secret",
+        "AGRIMIND_INGESTION_MQTT_PASSWORD": "server-password-secret",  # pragma: allowlist secret
         "AGRIMIND_INGESTION_MQTT_CA_FILE": "/etc/ssl/cert.pem",
         "AGRIMIND_INGESTION_SUPABASE_URL": "https://example.supabase.co",
         "AGRIMIND_INGESTION_SUPABASE_SERVICE_ROLE_KEY": "service-role-secret",

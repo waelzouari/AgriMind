@@ -206,7 +206,7 @@ def test_restart_redelivery_is_deterministic_with_durable_store_outcome() -> Non
 
 def test_logs_do_not_include_payload_or_secret(caplog: pytest.LogCaptureFixture) -> None:
     instance, _, _ = service()
-    secret = "do-not-log-this-secret"
+    secret = "do-not-log-this-secret"  # pragma: allowlist secret
     with caplog.at_level(logging.INFO):
         instance.process(telemetry_topic(), telemetry_payload(extra=secret), qos=1, retain=False)
     assert secret not in caplog.text

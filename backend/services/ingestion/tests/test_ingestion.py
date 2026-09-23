@@ -125,23 +125,22 @@ def test_permanent_validation_rejections(topic: str, payload: bytes, reason: str
 
     result = instance.process(topic, payload, qos=1, retain=False)
 
-    assert result == result.__class__(IngestionOutcome.REJECTED, reason)
+    assert result.outcome is IngestionOutcome.REJECTED
+    assert result.reason_code == reason
     assert persistence.telemetry == []
 
 
 def test_unknown_inactive_and_registry_cross_farm_devices_are_rejected() -> None:
     instance, registry, _ = service()
     registry.devices.clear()
-    assert (
-        instance.process(telemetry_topic(), telemetry_payload(), qos=1, retain=False).reason_code
-        == "unknown_device"
-    )
+    unknown = instance.process(telemetry_topic(), telemetry_payload(), qos=1, retain=False)
+    assert unknown.reason_code == "unknown_device"
+    assert unknown.correlatable_telemetry is True
 
     registry.devices[DEVICE] = DeviceRegistration(DEVICE, FARM_A, None, False)
-    assert (
-        instance.process(telemetry_topic(), telemetry_payload(), qos=1, retain=False).reason_code
-        == "inactive_device"
-    )
+    inactive = instance.process(telemetry_topic(), telemetry_payload(), qos=1, retain=False)
+    assert inactive.reason_code == "inactive_device"
+    assert inactive.correlatable_telemetry is True
 
     registry.devices[DEVICE] = DeviceRegistration(DEVICE, FARM_B, None, True)
     assert (
@@ -174,7 +173,8 @@ def test_duplicate_is_success_conflict_is_permanent_and_outage_is_retryable() ->
 
     persistence.failure = PersistenceRejected("message_id_conflict")
     conflict = instance.process(telemetry_topic(), telemetry_payload(), qos=1, retain=False)
-    assert conflict == conflict.__class__(IngestionOutcome.REJECTED, "message_id_conflict")
+    assert conflict.outcome is IngestionOutcome.REJECTED
+    assert conflict.reason_code == "message_id_conflict"
 
     persistence.failure = PersistenceUnavailable("offline")
     unavailable = instance.process(telemetry_topic(), telemetry_payload(), qos=1, retain=False)

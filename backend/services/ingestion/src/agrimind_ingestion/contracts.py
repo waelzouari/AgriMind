@@ -22,9 +22,21 @@ _TOPIC = re.compile(
 
 
 class ContractViolation(ValueError):
-    def __init__(self, reason_code: str) -> None:
+    def __init__(
+        self,
+        reason_code: str,
+        *,
+        message_id: UUID | None = None,
+        farm_id: UUID | None = None,
+        device_id: UUID | None = None,
+        kind: MessageKind | None = None,
+    ) -> None:
         super().__init__(reason_code)
         self.reason_code = reason_code
+        self.message_id = message_id
+        self.farm_id = farm_id
+        self.device_id = device_id
+        self.kind = kind
 
 
 def _reject_duplicate_fields(pairs: list[tuple[str, object]]) -> dict[str, object]:
@@ -101,10 +113,29 @@ class ContractValidator:
             raise ContractViolation("malformed_json") from error
         if not isinstance(data, dict):
             raise ContractViolation("invalid_contract")
+        candidate_message_id: UUID | None = None
+        candidate_farm_id: UUID | None = None
+        candidate_device_id: UUID | None = None
+        try:
+            candidate_message_id = _canonical_uuid(data.get("message_id"), "message_id")
+            candidate_farm_id = _canonical_uuid(data.get("farm_id"), "farm_id")
+            candidate_device_id = _canonical_uuid(data.get("device_id"), "device_id")
+            if candidate_farm_id != identity.farm_id or candidate_device_id != identity.device_id:
+                candidate_message_id = None
+                candidate_farm_id = None
+                candidate_device_id = None
+        except ContractViolation:
+            pass
         try:
             self._validators[identity.kind].validate(data)
         except ValidationError as error:
-            raise ContractViolation("invalid_contract") from error
+            raise ContractViolation(
+                "invalid_contract",
+                message_id=candidate_message_id,
+                farm_id=candidate_farm_id,
+                device_id=candidate_device_id,
+                kind=identity.kind if candidate_message_id is not None else None,
+            ) from error
 
         message_id = _canonical_uuid(data.get("message_id"), "message_id")
         farm_id = _canonical_uuid(data.get("farm_id"), "farm_id")
@@ -114,7 +145,13 @@ class ContractValidator:
         if device_id != identity.device_id:
             raise ContractViolation("topic_payload_device_mismatch")
         if identity.kind is MessageKind.TELEMETRY and data.get("metric") != identity.metric:
-            raise ContractViolation("topic_payload_metric_mismatch")
+            raise ContractViolation(
+                "topic_payload_metric_mismatch",
+                message_id=message_id,
+                farm_id=farm_id,
+                device_id=device_id,
+                kind=identity.kind,
+            )
         return ValidatedMessage(
             identity=identity,
             message_id=message_id,

@@ -15,6 +15,15 @@ from agrimind_edge.domain.mqtt import (
 )
 
 
+def _matches(topic_filter: str, topic: str) -> bool:
+    filter_parts = topic_filter.split("/")
+    topic_parts = topic.split("/")
+    return len(filter_parts) == len(topic_parts) and all(
+        expected == "+" or expected == actual
+        for expected, actual in zip(filter_parts, topic_parts, strict=True)
+    )
+
+
 class FakeMqttTransport:
     def __init__(
         self,
@@ -97,7 +106,14 @@ class FakeMqttTransport:
     def simulate_message(self, message: ReceivedMqttMessage) -> None:
         if not self._connected:
             raise RuntimeError("cannot deliver MQTT message while disconnected")
-        handler = self._active_subscriptions.get(message.topic)
+        handler = next(
+            (
+                candidate
+                for topic_filter, candidate in self._active_subscriptions.items()
+                if _matches(topic_filter, message.topic)
+            ),
+            None,
+        )
         if handler is None:
             raise RuntimeError("no active subscription for MQTT message topic")
         self.operations.append("receive")

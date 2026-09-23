@@ -12,7 +12,8 @@ from agrimind_edge.application.persistence_ports import (
     PersistenceConflict,
     PersistenceError,
 )
-from agrimind_edge.contracts import CommandAcknowledgement
+from agrimind_edge.contracts import CommandAcknowledgement, IngestionAcknowledgement
+from agrimind_edge.contracts.enums import IngestionAcknowledgementStatus
 from agrimind_edge.contracts.validation import format_utc_timestamp, parse_utc_timestamp
 from agrimind_edge.domain.mqtt import MqttPublication
 from agrimind_edge.domain.persistence import (
@@ -155,7 +156,7 @@ class SqliteEventOutboxStore:
                            o.topic, o.payload AS publication_payload, o.qos,
                            o.retain, o.attempt_count, o.created_at
                     FROM outbox o JOIN edge_events e USING(event_id)
-                    WHERE o.state = 'pending'
+                    WHERE o.state IN ('pending', 'broker_accepted')
                     ORDER BY e.occurred_at, e.event_id
                     LIMIT ?
                     """,
@@ -172,12 +173,106 @@ class SqliteEventOutboxStore:
             event_id,
         )
 
-    def mark_delivered(self, event_id: UUID, delivered_at: datetime) -> None:
-        self._update_pending(
-            "state = 'delivered', delivered_at = ?",
-            format_utc_timestamp(delivered_at, "delivered_at"),
-            event_id,
+    def mark_broker_accepted(self, event_id: UUID, accepted_at: datetime) -> None:
+        timestamp = format_utc_timestamp(accepted_at, "accepted_at")
+        with self._lock:
+            connection = self._require_connection()
+            try:
+                event = connection.execute(
+                    """
+                    SELECT e.event_type, o.state
+                    FROM edge_events e JOIN outbox o USING(event_id)
+                    WHERE e.event_id = ?
+                    """,
+                    (str(event_id),),
+                ).fetchone()
+                if event is None:
+                    raise PersistenceError("pending outbox event was not found")
+                if event["state"] in {"cloud_confirmed", "rejected", "delivered"}:
+                    return
+                state = "broker_accepted" if event["event_type"] == "telemetry" else "delivered"
+                with connection:
+                    updated = connection.execute(
+                        """
+                        UPDATE outbox SET state = ?, broker_accepted_at = ?
+                        WHERE event_id = ? AND state IN ('pending', 'broker_accepted')
+                        """,
+                        (state, timestamp, str(event_id)),
+                    ).rowcount
+                if updated != 1:
+                    state = connection.execute(
+                        "SELECT state FROM outbox WHERE event_id = ?",
+                        (str(event_id),),
+                    ).fetchone()
+                    if state is not None and state["state"] in {
+                        "cloud_confirmed",
+                        "rejected",
+                        "delivered",
+                    }:
+                        return
+                    raise PersistenceError("pending outbox event was not found")
+            except PersistenceError:
+                raise
+            except sqlite3.DatabaseError as error:
+                raise PersistenceError("SQLite outbox update failed") from error
+
+    def apply_ingestion_acknowledgement(self, acknowledgement: IngestionAcknowledgement) -> bool:
+        target_state = (
+            "rejected"
+            if acknowledgement.status is IngestionAcknowledgementStatus.REJECTED
+            else "cloud_confirmed"
         )
+        acknowledged_at = format_utc_timestamp(
+            acknowledgement.occurred_at, "acknowledgement.occurred_at"
+        )
+        with self._lock:
+            connection = self._require_connection()
+            try:
+                row = connection.execute(
+                    """
+                    SELECT e.event_type, e.farm_id, e.device_id, o.state,
+                           o.rejection_reason
+                    FROM edge_events e JOIN outbox o USING(event_id)
+                    WHERE e.event_id = ?
+                    """,
+                    (str(acknowledgement.message_id),),
+                ).fetchone()
+                if row is None:
+                    return False
+                if (
+                    row["event_type"] != "telemetry"
+                    or row["farm_id"] != str(acknowledgement.farm_id)
+                    or row["device_id"] != str(acknowledgement.device_id)
+                ):
+                    raise PersistenceConflict("ingestion acknowledgement identity mismatch")
+                if row["state"] in {"cloud_confirmed", "rejected"}:
+                    same_terminal = row["state"] == target_state
+                    same_reason = (
+                        target_state != "rejected"
+                        or row["rejection_reason"] == acknowledgement.reason_code
+                    )
+                    if same_terminal and same_reason:
+                        return False
+                    raise PersistenceConflict("conflicting terminal ingestion acknowledgement")
+                with connection:
+                    connection.execute(
+                        """
+                        UPDATE outbox
+                        SET state = ?, cloud_acknowledged_at = ?, rejection_reason = ?
+                        WHERE event_id = ?
+                        """,
+                        (
+                            target_state,
+                            acknowledged_at,
+                            acknowledgement.reason_code,
+                            str(acknowledgement.message_id),
+                        ),
+                    )
+                return True
+            except PersistenceConflict:
+                raise
+            except sqlite3.DatabaseError as error:
+                raise PersistenceError("SQLite ingestion acknowledgement failed") from error
 
     def prune(self, cutoff: datetime, now: datetime) -> PruneResult:
         cutoff_value = format_utc_timestamp(cutoff, "cutoff")
@@ -189,14 +284,16 @@ class SqliteEventOutboxStore:
                     pending = connection.execute(
                         """
                         SELECT COUNT(*) FROM edge_events e JOIN outbox o USING(event_id)
-                        WHERE e.occurred_at <= ? AND o.state = 'pending'
+                        WHERE e.occurred_at <= ?
+                          AND o.state IN ('pending', 'broker_accepted')
                         """,
                         (cutoff_value,),
                     ).fetchone()[0]
                     delivered = connection.execute(
                         """
                         SELECT COUNT(*) FROM edge_events e JOIN outbox o USING(event_id)
-                        WHERE e.occurred_at <= ? AND o.state = 'delivered'
+                        WHERE e.occurred_at <= ?
+                          AND o.state IN ('cloud_confirmed', 'rejected', 'delivered')
                         """,
                         (cutoff_value,),
                     ).fetchone()[0]
@@ -285,10 +382,21 @@ class SqliteEventOutboxStore:
             try:
                 with connection:
                     updated = connection.execute(
-                        f"UPDATE outbox SET {assignment} WHERE event_id = ? AND state = 'pending'",
+                        f"UPDATE outbox SET {assignment} WHERE event_id = ? "
+                        "AND state IN ('pending', 'broker_accepted')",
                         (timestamp, str(event_id)),
                     ).rowcount
                 if updated != 1:
+                    state = connection.execute(
+                        "SELECT state FROM outbox WHERE event_id = ?",
+                        (str(event_id),),
+                    ).fetchone()
+                    if state is not None and state["state"] in {
+                        "cloud_confirmed",
+                        "rejected",
+                        "delivered",
+                    }:
+                        return
                     raise PersistenceError("pending outbox event was not found")
             except PersistenceError:
                 raise

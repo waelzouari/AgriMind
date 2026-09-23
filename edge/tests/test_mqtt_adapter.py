@@ -255,6 +255,30 @@ def test_adapter_converts_paho_message_to_broker_neutral_message() -> None:
     assert ("subscribe", "exact/commands/pump", 1) in client.operations
 
 
+def test_adapter_delivers_only_bounded_trailing_wildcard_subscription() -> None:
+    client = FakePahoClient()
+    transport = PahoMqttTransport(
+        config(),
+        MqttCredentials("placeholder-user", "placeholder-password"),
+        client=client,
+        ssl_context_factory=lambda **kwargs: FakeSslContext(),
+    )
+    received: list[ReceivedMqttMessage] = []
+    transport.subscribe("exact/device/sync/acks/+", 1, received.append)
+
+    client.on_message(
+        None,
+        None,
+        SimpleNamespace(topic="exact/device/sync/acks/id", payload=b"{}", qos=1, retain=False),
+    )
+
+    assert len(received) == 1
+    with pytest.raises(ValueError, match="exact or use one trailing"):
+        transport.subscribe("exact/+/sync/acks/+", 1, received.append)
+    with pytest.raises(ValueError, match="exact or use one trailing"):
+        transport.subscribe("exact/device/#", 1, received.append)
+
+
 def test_adapter_rejects_failed_subscription() -> None:
     client = FakePahoClient()
     client.subscribe_rc = mqtt.MQTT_ERR_NO_CONN

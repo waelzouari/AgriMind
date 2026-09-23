@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
+from uuid import UUID
 
 import paho.mqtt.client as mqtt
 import pytest
@@ -12,7 +13,7 @@ from agrimind_ingestion.adapters.mqtt import (
     TELEMETRY_FILTER,
     PahoIngestionConsumer,
 )
-from agrimind_ingestion.domain import IngestionOutcome, IngestionResult
+from agrimind_ingestion.domain import IngestionOutcome, IngestionResult, MessageKind
 
 
 class FakeContext:
@@ -33,6 +34,8 @@ class FakeClient:
         self.on_connect_fail: Any = None
         self.on_disconnect: Any = None
         self.on_message: Any = None
+        self.on_publish: Any = None
+        self.publications: list[tuple[str, str, int, bool]] = []
 
     def username_pw_set(self, username: str, password: str) -> None:
         self.credentials = (username, password)
@@ -65,6 +68,10 @@ class FakeClient:
     def ack(self, message_id: int, qos: int) -> int:
         self.acknowledgements.append((message_id, qos))
         return mqtt.MQTT_ERR_SUCCESS
+
+    def publish(self, topic: str, payload: str, *, qos: int, retain: bool) -> Any:
+        self.publications.append((topic, payload, qos, retain))
+        return SimpleNamespace(rc=mqtt.MQTT_ERR_SUCCESS, mid=len(self.publications) + 100)
 
 
 class Processor:
@@ -131,14 +138,29 @@ def test_verified_tls_manual_ack_and_required_subscriptions() -> None:
     assert client.subscriptions == [(TELEMETRY_FILTER, 1), (STATUS_FILTER, 1)]
 
 
-def test_terminal_result_is_acked_and_retryable_result_disconnects_without_ack() -> None:
+def test_terminal_result_publishes_application_ack_before_broker_ack() -> None:
     message = SimpleNamespace(topic="topic", payload=b"payload", qos=1, retain=False, mid=7)
     accepted_client = FakeClient()
-    consumer(
+    instance = consumer(
         accepted_client,
-        IngestionResult(IngestionOutcome.DUPLICATE, "duplicate"),
-    )._on_message(accepted_client, None, message)
+        IngestionResult(
+            IngestionOutcome.DUPLICATE,
+            "duplicate",
+            UUID("33333333-3333-4333-8333-333333333333"),
+            UUID("22222222-2222-4222-8222-222222222222"),
+            UUID("11111111-1111-4111-8111-111111111111"),
+            MessageKind.TELEMETRY,
+        ),
+    )
+    instance._on_message(accepted_client, None, message)
+    assert accepted_client.acknowledgements == []
+    assert len(accepted_client.publications) == 1
+    instance._on_publish(accepted_client, None, 101, None, None)
     assert accepted_client.acknowledgements == [(7, 1)]
+
+
+def test_retryable_result_disconnects_without_ack_or_receipt() -> None:
+    message = SimpleNamespace(topic="topic", payload=b"payload", qos=1, retain=False, mid=7)
 
     retry_client = FakeClient()
     consumer(
@@ -146,4 +168,5 @@ def test_terminal_result_is_acked_and_retryable_result_disconnects_without_ack()
         IngestionResult(IngestionOutcome.RETRYABLE, "persistence_unavailable"),
     )._on_message(retry_client, None, message)
     assert retry_client.acknowledgements == []
+    assert retry_client.publications == []
     assert retry_client.disconnected is True

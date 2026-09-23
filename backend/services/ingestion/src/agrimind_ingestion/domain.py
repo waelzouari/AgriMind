@@ -57,10 +57,21 @@ class IngestionResult:
     reason_code: str
     message_id: UUID | None = None
     device_id: UUID | None = None
+    farm_id: UUID | None = None
+    message_kind: MessageKind | None = None
 
     @property
     def terminal(self) -> bool:
         return self.outcome is not IngestionOutcome.RETRYABLE
+
+    @property
+    def correlatable_telemetry(self) -> bool:
+        return (
+            self.message_kind is MessageKind.TELEMETRY
+            and self.message_id is not None
+            and self.farm_id is not None
+            and self.device_id is not None
+        )
 
 
 @dataclass(frozen=True, slots=True)

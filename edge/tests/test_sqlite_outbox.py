@@ -9,11 +9,18 @@ import pytest
 
 from agrimind_edge.adapters.fake import FakeMqttTransport
 from agrimind_edge.adapters.persistence import SqliteEventOutboxStore
+from agrimind_edge.adapters.persistence.migrations import MIGRATIONS
 from agrimind_edge.application.outbox_service import OutboxService
 from agrimind_edge.application.persistence_ports import PersistenceConflict, PersistenceError
-from agrimind_edge.contracts import CommandAcknowledgement, PumpCommand, Telemetry
+from agrimind_edge.contracts import (
+    CommandAcknowledgement,
+    IngestionAcknowledgement,
+    PumpCommand,
+    Telemetry,
+)
 from agrimind_edge.contracts.enums import (
     AcknowledgementStatus,
+    IngestionAcknowledgementStatus,
     PumpAction,
     TelemetryMetric,
 )
@@ -40,6 +47,23 @@ def telemetry(number: int, occurred_at: datetime = NOW) -> Telemetry:
 
 def publication(item: Telemetry) -> MqttPublication:
     return MqttPublication("agrimind/v1/test", item.to_json(), 1, False)
+
+
+def ingestion_ack(
+    item: Telemetry,
+    status: IngestionAcknowledgementStatus = IngestionAcknowledgementStatus.PERSISTED,
+    *,
+    reason_code: str | None = None,
+) -> IngestionAcknowledgement:
+    return IngestionAcknowledgement(
+        item.message_id,
+        item.farm_id,
+        item.device_id,
+        "telemetry",
+        status,
+        NOW,
+        reason_code,
+    )
 
 
 def test_schema_is_idempotent_and_pending_survives_restart(tmp_path: Path) -> None:
@@ -97,8 +121,11 @@ def test_puback_is_required_before_delivery_and_retry(tmp_path: Path) -> None:
     assert outbox.submit(event, publication(item), attempt_now=True) is False
     assert len(store.pending(limit=10)) == 1
     outbox.drain()
+    assert len(store.pending(limit=10)) == 1
+    assert store.enqueue(event, publication(item), NOW) is EnqueueResult.BROKER_ACCEPTED
+    assert store.apply_ingestion_acknowledgement(ingestion_ack(item)) is True
     assert store.pending(limit=10) == ()
-    assert store.enqueue(event, publication(item), NOW) is EnqueueResult.DELIVERED
+    assert store.enqueue(event, publication(item), NOW) is EnqueueResult.CLOUD_CONFIRMED
 
 
 def test_publish_failure_remains_pending_for_retry(tmp_path: Path) -> None:
@@ -114,11 +141,11 @@ def test_publish_failure_remains_pending_for_retry(tmp_path: Path) -> None:
     )
     assert len(store.pending(limit=10)) == 1
     outbox.drain()
-    assert store.pending(limit=10) == ()
+    assert len(store.pending(limit=10)) == 1
 
 
 class MarkDeliveryFailureStore(SqliteEventOutboxStore):
-    def mark_delivered(self, event_id: UUID, delivered_at: datetime) -> None:
+    def mark_broker_accepted(self, event_id: UUID, accepted_at: datetime) -> None:
         raise PersistenceError("simulated crash window")
 
 
@@ -141,7 +168,7 @@ def test_puback_before_sqlite_mark_is_republished_after_restart(tmp_path: Path) 
     restarted_outbox.drain()
 
     assert len(transport.publications) == 2
-    assert restarted_store.pending(limit=10) == ()
+    assert len(restarted_store.pending(limit=10)) == 1
 
 
 def test_retention_prunes_pending_and_delivered_at_24_hours(tmp_path: Path) -> None:
@@ -152,12 +179,108 @@ def test_retention_prunes_pending_and_delivered_at_24_hours(tmp_path: Path) -> N
     recent = telemetry(6, NOW - timedelta(hours=23, minutes=59))
     for item in (old_pending, old_delivered, recent):
         store.enqueue(EdgeEvent.from_telemetry(item), publication(item), NOW)
-    store.mark_delivered(old_delivered.message_id, NOW)
+    store.mark_broker_accepted(old_delivered.message_id, NOW)
+    store.apply_ingestion_acknowledgement(ingestion_ack(old_delivered))
 
     result = store.prune(NOW - timedelta(hours=24), NOW)
 
     assert (result.pending_events, result.delivered_events) == (1, 1)
     assert [entry.event.event_id for entry in store.pending(limit=10)] == [recent.message_id]
+
+
+@pytest.mark.parametrize(
+    ("age", "survives"),
+    [
+        (timedelta(minutes=1), True),
+        (timedelta(hours=1), True),
+        (timedelta(hours=23), True),
+        (timedelta(hours=23, minutes=59, seconds=59), True),
+        (timedelta(hours=24), False),
+        (timedelta(hours=25), False),
+    ],
+)
+def test_retention_boundary_is_deterministic(
+    tmp_path: Path, age: timedelta, survives: bool
+) -> None:
+    store = SqliteEventOutboxStore(tmp_path / "edge.sqlite3")
+    store.initialize()
+    item = telemetry(40, NOW - age)
+    store.enqueue(EdgeEvent.from_telemetry(item), publication(item), NOW)
+
+    store.prune(NOW - timedelta(hours=24), NOW)
+
+    assert bool(store.pending(limit=10)) is survives
+
+
+def test_rejected_terminal_event_is_not_retried_and_is_purged_normally(
+    tmp_path: Path,
+) -> None:
+    store = SqliteEventOutboxStore(tmp_path / "edge.sqlite3")
+    store.initialize()
+    item = telemetry(42, NOW - timedelta(hours=25))
+    event = EdgeEvent.from_telemetry(item)
+    mqtt = publication(item)
+    store.enqueue(event, mqtt, NOW)
+    store.apply_ingestion_acknowledgement(
+        ingestion_ack(
+            item,
+            IngestionAcknowledgementStatus.REJECTED,
+            reason_code="stale_message",
+        )
+    )
+
+    assert store.pending(limit=10) == ()
+    result = store.prune(NOW - timedelta(hours=24), NOW)
+    assert result.delivered_events == 1
+    assert store.enqueue(event, mqtt, NOW) is EnqueueResult.CREATED
+
+
+def test_agm008_delivered_rows_migrate_conservatively_to_broker_accepted(
+    tmp_path: Path,
+) -> None:
+    path = tmp_path / "edge.sqlite3"
+    item = telemetry(41)
+    event = EdgeEvent.from_telemetry(item)
+    mqtt = publication(item)
+    connection = sqlite3.connect(path)
+    connection.executescript(MIGRATIONS[0])
+    connection.execute(
+        "CREATE TABLE schema_migrations(version INTEGER PRIMARY KEY, applied_at TEXT NOT NULL)"
+    )
+    connection.execute("INSERT INTO schema_migrations VALUES (1, ?)", (NOW.isoformat(),))
+    connection.execute(
+        "INSERT INTO edge_events VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (
+            str(event.event_id),
+            event.event_type.value,
+            str(event.farm_id),
+            str(event.device_id),
+            "2026-09-23T12:00:00.000Z",
+            event.payload,
+            "2026-09-23T12:00:00.000Z",
+        ),
+    )
+    connection.execute(
+        "INSERT INTO outbox VALUES (?, ?, ?, ?, ?, 'delivered', 1, ?, ?, ?)",
+        (
+            str(event.event_id),
+            mqtt.topic,
+            mqtt.payload,
+            mqtt.qos,
+            int(mqtt.retain),
+            "2026-09-23T12:00:00.000Z",
+            "2026-09-23T12:00:00.000Z",
+            "2026-09-23T12:00:00.000Z",
+        ),
+    )
+    connection.commit()
+    connection.close()
+
+    store = SqliteEventOutboxStore(path)
+    store.initialize()
+
+    assert store.enqueue(event, mqtt, NOW) is EnqueueResult.BROKER_ACCEPTED
+    assert len(store.pending(limit=10)) == 1
 
 
 def test_processed_command_survives_restart_without_replay(tmp_path: Path) -> None:

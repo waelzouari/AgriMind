@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Protocol
 from uuid import UUID
 
+from agrimind_edge.contracts import IngestionAcknowledgement
 from agrimind_edge.domain.mqtt import MqttPublication
 from agrimind_edge.domain.persistence import (
     EdgeEvent,
@@ -38,7 +39,11 @@ class EventOutboxStore(Protocol):
 
     def record_attempt(self, event_id: UUID, attempted_at: datetime) -> None: ...
 
-    def mark_delivered(self, event_id: UUID, delivered_at: datetime) -> None: ...
+    def mark_broker_accepted(self, event_id: UUID, accepted_at: datetime) -> None: ...
+
+    def apply_ingestion_acknowledgement(
+        self, acknowledgement: IngestionAcknowledgement
+    ) -> bool: ...
 
     def prune(self, cutoff: datetime, now: datetime) -> PruneResult: ...
 

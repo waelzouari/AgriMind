@@ -26,7 +26,12 @@ class DeviceAclPolicy:
     def subscribe_topics(self) -> frozenset[str]:
         """Allow only the device's exact AGM-007 command topic."""
 
-        return frozenset({self.topics.pump_command()})
+        return frozenset(
+            {
+                self.topics.pump_command(),
+                self.topics.ingestion_acknowledgement_filter(),
+            }
+        )
 
     @property
     def acknowledgement_filter(self) -> str:

@@ -40,11 +40,11 @@ class IngestionService:
     def process(self, topic: str, payload: bytes, *, qos: int, retain: bool) -> IngestionResult:
         try:
             identity = parse_topic(topic)
+            message = self._contracts.validate(identity, payload)
             if qos != 1:
                 raise ContractViolation("invalid_qos")
             if identity.kind is MessageKind.TELEMETRY and retain:
                 raise ContractViolation("retained_telemetry")
-            message = self._contracts.validate(identity, payload)
             now = self._now()
             if message.recorded_at < now - self._maximum_age:
                 raise ContractViolation("stale_message")
@@ -68,11 +68,27 @@ class IngestionService:
                 outcome,
                 message.message_id,
                 identity.device_id,
+                identity.farm_id,
+                identity.kind,
             )
         except ContractViolation as error:
-            result = IngestionResult(IngestionOutcome.REJECTED, error.reason_code)
+            result = IngestionResult(
+                IngestionOutcome.REJECTED,
+                error.reason_code,
+                error.message_id or (message.message_id if "message" in locals() else None),
+                error.device_id or (identity.device_id if "message" in locals() else None),
+                error.farm_id or (identity.farm_id if "message" in locals() else None),
+                error.kind or (identity.kind if "message" in locals() else None),
+            )
         except PersistenceRejected as error:
-            result = IngestionResult(IngestionOutcome.REJECTED, error.reason_code)
+            result = IngestionResult(
+                IngestionOutcome.REJECTED,
+                error.reason_code,
+                message.message_id if "message" in locals() else None,
+                identity.device_id if "identity" in locals() else None,
+                identity.farm_id if "identity" in locals() else None,
+                identity.kind if "identity" in locals() else None,
+            )
         except PersistenceUnavailable:
             result = IngestionResult(IngestionOutcome.RETRYABLE, "persistence_unavailable")
 

@@ -106,8 +106,9 @@ class PahoMqttTransport:
         return _PahoPublishReceipt(result)
 
     def subscribe(self, topic: str, qos: int, handler: MessageHandler) -> None:
-        if not topic or "+" in topic or "#" in topic:
-            raise ValueError("MQTT subscription topic must be exact and non-empty")
+        wildcard_invalid = "+" in topic and (topic.count("+") != 1 or not topic.endswith("/+"))
+        if not topic or "#" in topic or wildcard_invalid:
+            raise ValueError("MQTT subscription must be exact or use one trailing +")
         if qos not in {0, 1, 2}:
             raise ValueError("MQTT subscription QoS must be 0, 1, or 2")
         previous_handler = self._message_handlers.get(topic)
@@ -163,7 +164,14 @@ class PahoMqttTransport:
 
     def _handle_message(self, client: Any, userdata: Any, message: Any) -> None:
         del client, userdata
-        handler = self._message_handlers.get(message.topic)
+        handler = next(
+            (
+                candidate
+                for topic_filter, candidate in self._message_handlers.items()
+                if mqtt.topic_matches_sub(topic_filter, message.topic)
+            ),
+            None,
+        )
         if handler is None:
             self._logger.warning(
                 "mqtt_unhandled_message",

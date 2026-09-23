@@ -19,6 +19,9 @@ class EdgeEventType(StrEnum):
 class EnqueueResult(StrEnum):
     CREATED = "created"
     PENDING = "pending"
+    BROKER_ACCEPTED = "broker_accepted"
+    CLOUD_CONFIRMED = "cloud_confirmed"
+    REJECTED = "rejected"
     DELIVERED = "delivered"
 
 

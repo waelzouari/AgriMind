@@ -40,6 +40,7 @@ class CloudMqttService:
         status_source: DeviceStatusSource,
         *,
         command_message_handler: MessageHandler | None = None,
+        ingestion_acknowledgement_handler: MessageHandler | None = None,
         durable_publisher: DurableEventPublisher | None = None,
         clock: Callable[[], datetime] | None = None,
         message_id_factory: Callable[[], UUID] | None = None,
@@ -50,6 +51,7 @@ class CloudMqttService:
         self._topics = topics
         self._status_source = status_source
         self._command_message_handler = command_message_handler
+        self._ingestion_acknowledgement_handler = ingestion_acknowledgement_handler
         self._durable_publisher = durable_publisher
         self._clock = clock or (lambda: datetime.now(UTC))
         self._message_id_factory = message_id_factory or uuid4
@@ -179,6 +181,18 @@ class CloudMqttService:
                             "event": "mqtt_command_subscription_failed",
                             "topic": self._topics.pump_command(),
                         },
+                    )
+            if self._ingestion_acknowledgement_handler is not None:
+                try:
+                    self._transport.subscribe(
+                        self._topics.ingestion_acknowledgement_filter(),
+                        MQTT_QOS_AT_LEAST_ONCE,
+                        self._ingestion_acknowledgement_handler,
+                    )
+                except Exception:
+                    self._logger.warning(
+                        "mqtt_ingestion_ack_subscription_failed",
+                        extra={"event": "mqtt_ingestion_ack_subscription_failed"},
                     )
             if self._durable_publisher is not None:
                 self._durable_publisher.request_drain()

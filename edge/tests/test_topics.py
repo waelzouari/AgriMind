@@ -20,6 +20,8 @@ def test_topic_construction_is_centralized_lowercase_and_versioned() -> None:
     assert topics.pump_command().endswith("/commands/pump")
     assert topics.acknowledgement(COMMAND_ID).endswith(f"/acks/{COMMAND_ID}")
     assert topics.device_status().endswith("/status/device")
+    assert topics.ingestion_acknowledgement(COMMAND_ID).endswith(f"/sync/acks/{COMMAND_ID}")
+    assert topics.ingestion_acknowledgement_filter().endswith("/sync/acks/+")
     assert topics.irrigation_result().endswith("/events/irrigation_result")
 
 

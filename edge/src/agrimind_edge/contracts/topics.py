@@ -41,5 +41,13 @@ class TopicBuilder:
     def device_status(self) -> str:
         return f"{self.base}/status/device"
 
+    def ingestion_acknowledgement(self, message_id: UUID) -> str:
+        if message_id.int == 0:
+            raise ValueError("message_id must be a non-zero UUID")
+        return f"{self.base}/sync/acks/{message_id}"
+
+    def ingestion_acknowledgement_filter(self) -> str:
+        return f"{self.base}/sync/acks/+"
+
     def irrigation_result(self) -> str:
         return f"{self.base}/events/irrigation_result"

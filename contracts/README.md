@@ -9,3 +9,7 @@ The schemas use JSON Schema Draft 2020-12 and are language-neutral so Flutter,
 backend services, and edge code can implement the same messages. Python models
 in `edge/src/agrimind_edge/contracts/` provide strict runtime validation and
 canonical JSON serialization for the edge process.
+
+`ingestion-acknowledgement.schema.json` correlates only telemetry persistence
+results. It is distinct from pump-command acknowledgements and never contains
+the original telemetry payload or credentials.

@@ -62,11 +62,13 @@ recovery receive the same attention as happy paths.
 ### Flutter
 
 - Unit: authentication session restoration, auth-state observation, safe
-  provider-error mapping, repeated-submit suppression, repositories,
-  validators, command construction, reconnect state, and state controllers.
+  provider-error mapping, repeated-submit suppression, one-farm lookup and
+  creation recovery, repositories, validators, command construction, reconnect
+  state, and state controllers.
 - Widget: startup restoration without login flash, login validation and safe
-  errors, logout, protected-route gating, loading/empty/error/offline states,
-  sensor cards, stale-data indicator, pump confirmation and pending/rejected
+  errors, logout, protected-route gating, farm-check loading, onboarding form,
+  lookup/create failure and retry, loading/empty/error/offline states, sensor
+  cards, stale-data indicator, pump confirmation and pending/rejected
   acknowledgement.
 - Integration: session restore, minimal farm onboarding, live dashboard, manual
   irrigation, mode switch, and weather fallback.

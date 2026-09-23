@@ -101,7 +101,11 @@ class OutboxService:
             )
             return self._direct_fallback(event, publication, attempt_now)
 
-        if result is EnqueueResult.DELIVERED:
+        if result in {
+            EnqueueResult.CLOUD_CONFIRMED,
+            EnqueueResult.REJECTED,
+            EnqueueResult.DELIVERED,
+        }:
             if replay_delivered and attempt_now:
                 return self._publish_direct(publication)
             return True
@@ -162,7 +166,7 @@ class OutboxService:
                     },
                 )
                 return False
-            self._store.mark_delivered(entry.event.event_id, self._now())
+            self._store.mark_broker_accepted(entry.event.event_id, self._now())
             return True
         except PersistenceError:
             raise

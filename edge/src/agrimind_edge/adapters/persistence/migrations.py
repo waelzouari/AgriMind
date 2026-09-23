@@ -44,4 +44,44 @@ MIGRATIONS: tuple[str, ...] = (
     CREATE INDEX idx_processed_commands_expiry
         ON processed_commands(expires_at, command_id);
     """,
+    """
+    ALTER TABLE outbox RENAME TO outbox_agm008;
+    DROP INDEX idx_outbox_pending_order;
+
+    CREATE TABLE outbox (
+        event_id TEXT PRIMARY KEY REFERENCES edge_events(event_id) ON DELETE CASCADE,
+        topic TEXT NOT NULL,
+        payload TEXT NOT NULL CHECK (json_valid(payload)),
+        qos INTEGER NOT NULL CHECK (qos IN (0, 1, 2)),
+        retain INTEGER NOT NULL CHECK (retain IN (0, 1)),
+        state TEXT NOT NULL CHECK (
+            state IN ('pending', 'broker_accepted', 'cloud_confirmed', 'rejected', 'delivered')
+        ),
+        attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+        last_attempt_at TEXT,
+        broker_accepted_at TEXT,
+        cloud_acknowledged_at TEXT,
+        rejection_reason TEXT,
+        created_at TEXT NOT NULL
+    );
+
+    INSERT INTO outbox(
+        event_id, topic, payload, qos, retain, state, attempt_count,
+        last_attempt_at, broker_accepted_at, created_at
+    )
+    SELECT event_id, topic, payload, qos, retain,
+           CASE
+             WHEN state = 'delivered' AND event_id IN (
+               SELECT event_id FROM edge_events WHERE event_type = 'telemetry'
+             ) THEN 'broker_accepted'
+             WHEN state = 'delivered' THEN 'delivered'
+             ELSE 'pending'
+           END,
+           attempt_count, last_attempt_at, delivered_at, created_at
+    FROM outbox_agm008;
+
+    DROP TABLE outbox_agm008;
+    CREATE INDEX idx_outbox_pending_order
+        ON outbox(state, created_at, event_id);
+    """,
 )

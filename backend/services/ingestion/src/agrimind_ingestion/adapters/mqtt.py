@@ -6,11 +6,15 @@ import logging
 import ssl
 from collections.abc import Callable
 from pathlib import Path
+from threading import RLock
 from typing import Any, Protocol
 
 import paho.mqtt.client as mqtt
 from paho.mqtt.enums import CallbackAPIVersion
 
+from agrimind_ingestion.application.acknowledgements import (
+    IngestionAcknowledgementFactory,
+)
 from agrimind_ingestion.domain import IngestionResult
 
 TELEMETRY_FILTER = "agrimind/v1/farms/+/devices/+/telemetry/+"
@@ -35,11 +39,15 @@ class PahoIngestionConsumer:
         client: Any | None = None,
         ssl_context_factory: Callable[..., ssl.SSLContext] = ssl.create_default_context,
         logger: logging.Logger | None = None,
+        acknowledgement_factory: IngestionAcknowledgementFactory | None = None,
     ) -> None:
         self._host = host
         self._port = port
         self._processor = processor
         self._logger = logger or logging.getLogger(__name__)
+        self._acknowledgements = acknowledgement_factory or IngestionAcknowledgementFactory()
+        self._pending_application_acknowledgements: dict[int, tuple[int, int]] = {}
+        self._ack_lock = RLock()
         self._client = client or mqtt.Client(
             CallbackAPIVersion.VERSION2,
             client_id=client_id,
@@ -59,6 +67,7 @@ class PahoIngestionConsumer:
         self._client.on_connect_fail = self._on_connect_fail
         self._client.on_disconnect = self._on_disconnect
         self._client.on_message = self._on_message
+        self._client.on_publish = self._on_publish
 
     def start(self) -> None:
         self._client.connect_async(self._host, self._port, keepalive=60)
@@ -110,6 +119,8 @@ class PahoIngestionConsumer:
         properties: Any,
     ) -> None:
         del client, userdata, disconnect_flags, reason_code, properties
+        with self._ack_lock:
+            self._pending_application_acknowledgements.clear()
         self._logger.warning(
             "ingestion_mqtt_disconnected",
             extra={"event": "ingestion_mqtt_disconnected"},
@@ -132,6 +143,27 @@ class PahoIngestionConsumer:
             client.disconnect()
             return
         if result.terminal:
+            publication = self._acknowledgements.create(result)
+            if publication is not None:
+                with self._ack_lock:
+                    published = client.publish(
+                        publication.topic,
+                        publication.payload,
+                        qos=publication.qos,
+                        retain=publication.retain,
+                    )
+                    if published.rc != mqtt.MQTT_ERR_SUCCESS:
+                        self._logger.warning(
+                            "ingestion_application_ack_publish_failed",
+                            extra={"event": "ingestion_application_ack_publish_failed"},
+                        )
+                        client.disconnect()
+                        return
+                    self._pending_application_acknowledgements[published.mid] = (
+                        message.mid,
+                        message.qos,
+                    )
+                return
             acknowledgement_result = client.ack(message.mid, message.qos)
             if acknowledgement_result != mqtt.MQTT_ERR_SUCCESS:
                 self._logger.warning(
@@ -144,3 +176,22 @@ class PahoIngestionConsumer:
             extra={"event": "ingestion_retry_deferred"},
         )
         client.disconnect()
+
+    def _on_publish(
+        self,
+        client: Any,
+        userdata: Any,
+        message_id: int,
+        reason_code: Any,
+        properties: Any,
+    ) -> None:
+        del userdata, reason_code, properties
+        with self._ack_lock:
+            inbound = self._pending_application_acknowledgements.pop(message_id, None)
+        if inbound is None:
+            return
+        if client.ack(*inbound) != mqtt.MQTT_ERR_SUCCESS:
+            self._logger.warning(
+                "ingestion_mqtt_ack_failed",
+                extra={"event": "ingestion_mqtt_ack_failed"},
+            )

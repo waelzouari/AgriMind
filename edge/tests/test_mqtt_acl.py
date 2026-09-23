@@ -18,10 +18,25 @@ def test_device_acl_allows_only_exact_own_publish_topics() -> None:
     assert not policy.can_publish(own.pump_command())
 
 
-def test_agm006_grants_no_subscriptions_but_exposes_exact_future_command_topic() -> None:
+def test_agm007_allows_only_exact_own_command_subscription() -> None:
     topics = TopicBuilder(UUID(int=1), UUID(int=2))
+    other = TopicBuilder(UUID(int=3), UUID(int=4))
     policy = DeviceAclPolicy(topics)
 
-    assert policy.subscribe_topics == frozenset()
-    assert not policy.can_subscribe(topics.pump_command())
-    assert policy.future_pump_command_topic == topics.pump_command()
+    assert policy.subscribe_topics == frozenset({topics.pump_command()})
+    assert policy.can_subscribe(topics.pump_command())
+    assert not policy.can_subscribe(other.pump_command())
+    assert not policy.can_subscribe(f"{topics.base}/#")
+
+
+def test_agm007_allows_only_canonical_own_ack_publications() -> None:
+    topics = TopicBuilder(UUID(int=1), UUID(int=2))
+    other = TopicBuilder(UUID(int=3), UUID(int=4))
+    policy = DeviceAclPolicy(topics)
+    command_id = UUID(int=10)
+
+    assert policy.acknowledgement_filter == f"{topics.base}/acks/+"
+    assert policy.can_publish(topics.acknowledgement(command_id))
+    assert not policy.can_publish(other.acknowledgement(command_id))
+    assert not policy.can_publish(f"{topics.base}/acks/not-a-uuid")
+    assert not policy.can_publish(f"{topics.base}/acks/+")

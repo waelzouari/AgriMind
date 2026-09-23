@@ -140,6 +140,24 @@ def test_expired_command_is_rejected() -> None:
         PumpCommand.from_json(_json(_command_payload()), now=NOW + timedelta(minutes=2))
 
 
+def test_processing_deserializer_preserves_contract_but_defers_expiry() -> None:
+    payload = _json(_command_payload())
+
+    command = PumpCommand.from_json_without_expiry_validation(payload)
+
+    assert command.command_id == COMMAND_ID
+    with pytest.raises(ValueError, match="command has expired"):
+        PumpCommand.from_json(payload, now=NOW + timedelta(minutes=2))
+
+
+def test_processing_deserializer_keeps_structural_validation() -> None:
+    payload = _command_payload()
+    payload["action"] = "toggle"
+
+    with pytest.raises(ValueError, match="unsupported action"):
+        PumpCommand.from_json_without_expiry_validation(_json(payload))
+
+
 def test_duplicate_json_fields_are_rejected() -> None:
     payload = _json(_command_payload())
     duplicate = payload[:-1] + ',"action":"off"}'
@@ -230,6 +248,18 @@ def test_irrigation_delta_and_outcome_must_be_consistent() -> None:
                 status=AcknowledgementStatus.COMPLETED,
                 occurred_at=NOW,
                 pump_state=False,
+            ).to_dict(),
+        ),
+        (
+            "command-acknowledgement.schema.json",
+            CommandAcknowledgement(
+                acknowledgement_id=MESSAGE_ID,
+                command_id=COMMAND_ID,
+                farm_id=FARM_ID,
+                device_id=DEVICE_ID,
+                status=AcknowledgementStatus.REJECTED,
+                occurred_at=NOW,
+                reason_code="invalid_command",
             ).to_dict(),
         ),
         (

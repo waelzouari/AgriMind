@@ -2,8 +2,16 @@
 
 from __future__ import annotations
 
-from agrimind_edge.application.mqtt_ports import ConnectionHandler, DisconnectionHandler
-from agrimind_edge.domain.mqtt import DeviceRuntimeStatus, MqttPublication
+from agrimind_edge.application.mqtt_ports import (
+    ConnectionHandler,
+    DisconnectionHandler,
+    MessageHandler,
+)
+from agrimind_edge.domain.mqtt import (
+    DeviceRuntimeStatus,
+    MqttPublication,
+    ReceivedMqttMessage,
+)
 
 
 class FakeMqttTransport:
@@ -20,9 +28,12 @@ class FakeMqttTransport:
         self.operations: list[str] = []
         self.publications: list[MqttPublication] = []
         self.last_will: MqttPublication | None = None
+        self.subscriptions: list[tuple[str, int]] = []
+        self._active_subscriptions: dict[str, MessageHandler] = {}
         self._on_connected: ConnectionHandler = lambda: None
         self._on_disconnected: DisconnectionHandler = lambda: None
         self._publish_attempts = 0
+        self._connected = False
 
     def set_connection_handlers(
         self,
@@ -42,25 +53,49 @@ class FakeMqttTransport:
         if self.connect_failure is not None:
             raise self.connect_failure
         if self.auto_connect:
+            self._connected = True
             self._on_connected()
 
     def publish(self, publication: MqttPublication) -> None:
+        if not self._connected:
+            raise RuntimeError("fake MQTT transport is disconnected")
         self._publish_attempts += 1
         self.operations.append("publish")
         if self._publish_attempts in self.fail_publish_at:
             raise RuntimeError("scripted MQTT publish failure")
         self.publications.append(publication)
 
+    def subscribe(self, topic: str, qos: int, handler: MessageHandler) -> None:
+        if not self._connected:
+            raise RuntimeError("fake MQTT transport is disconnected")
+        self.operations.append("subscribe")
+        self.subscriptions.append((topic, qos))
+        self._active_subscriptions[topic] = handler
+
     def disconnect(self) -> None:
         self.operations.append("disconnect")
+        self._connected = False
+        self._active_subscriptions.clear()
 
     def simulate_disconnect(self) -> None:
         self.operations.append("simulate_disconnect")
+        self._connected = False
+        self._active_subscriptions.clear()
         self._on_disconnected()
 
     def simulate_reconnect(self) -> None:
         self.operations.append("simulate_reconnect")
+        self._connected = True
         self._on_connected()
+
+    def simulate_message(self, message: ReceivedMqttMessage) -> None:
+        if not self._connected:
+            raise RuntimeError("cannot deliver MQTT message while disconnected")
+        handler = self._active_subscriptions.get(message.topic)
+        if handler is None:
+            raise RuntimeError("no active subscription for MQTT message topic")
+        self.operations.append("receive")
+        handler(message)
 
 
 class FakeDeviceStatusSource:

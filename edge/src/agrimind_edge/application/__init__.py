@@ -1,6 +1,10 @@
 """Application services and hardware-independent ports."""
 
 from agrimind_edge.application.mqtt_acl import DeviceAclPolicy
+from agrimind_edge.application.mqtt_commands import (
+    MqttAcknowledgementPublisher,
+    MqttPumpCommandProcessor,
+)
 from agrimind_edge.application.mqtt_service import CloudMqttService
 from agrimind_edge.application.ports import (
     AirSensorPort,
@@ -17,6 +21,8 @@ __all__ = [
     "AirSensorPort",
     "CloudMqttService",
     "DeviceAclPolicy",
+    "MqttAcknowledgementPublisher",
+    "MqttPumpCommandProcessor",
     "PumpCommandHandler",
     "PumpPort",
     "SafePumpController",

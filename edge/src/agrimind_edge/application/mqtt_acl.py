@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from uuid import UUID
 
 from agrimind_edge.contracts.enums import TelemetryMetric
 from agrimind_edge.contracts.topics import TopicBuilder
@@ -23,18 +24,28 @@ class DeviceAclPolicy:
 
     @property
     def subscribe_topics(self) -> frozenset[str]:
-        """AGM-006 is publish-only; it grants no subscriptions."""
+        """Allow only the device's exact AGM-007 command topic."""
 
-        return frozenset()
+        return frozenset({self.topics.pump_command()})
 
     @property
-    def future_pump_command_topic(self) -> str:
-        """Exact future permission; not granted by AGM-006."""
+    def acknowledgement_filter(self) -> str:
+        """Broker ACL filter for per-command acknowledgement publications."""
 
-        return self.topics.pump_command()
+        return f"{self.topics.base}/acks/+"
 
     def can_publish(self, topic: str) -> bool:
-        return topic in self.publish_topics
+        if topic in self.publish_topics:
+            return True
+        prefix = f"{self.topics.base}/acks/"
+        if not topic.startswith(prefix):
+            return False
+        suffix = topic.removeprefix(prefix)
+        try:
+            command_id = UUID(suffix)
+        except ValueError:
+            return False
+        return command_id.int != 0 and str(command_id) == suffix
 
     def can_subscribe(self, topic: str) -> bool:
         return topic in self.subscribe_topics

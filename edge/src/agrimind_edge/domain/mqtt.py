@@ -32,6 +32,20 @@ class MqttPublication:
 
 
 @dataclass(frozen=True, slots=True)
+class ReceivedMqttMessage:
+    topic: str
+    payload: bytes
+    qos: int
+    retain: bool
+
+    def __post_init__(self) -> None:
+        if not self.topic or "+" in self.topic or "#" in self.topic:
+            raise ValueError("received MQTT topic must be exact and non-empty")
+        if self.qos not in {0, 1, 2}:
+            raise ValueError("received MQTT QoS must be 0, 1, or 2")
+
+
+@dataclass(frozen=True, slots=True)
 class DeviceRuntimeStatus:
     pump_state: bool
     health: DeviceHealth

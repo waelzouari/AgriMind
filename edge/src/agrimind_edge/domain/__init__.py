@@ -4,6 +4,7 @@ from agrimind_edge.domain.mqtt import (
     DeviceRuntimeStatus,
     MqttConnectionState,
     MqttPublication,
+    ReceivedMqttMessage,
     TelemetryPublishResult,
 )
 from agrimind_edge.domain.pump import AutomaticStopResult, PumpDecisionCode, PumpState
@@ -30,6 +31,7 @@ __all__ = [
     "PumpResult",
     "PumpState",
     "ReadingQuality",
+    "ReceivedMqttMessage",
     "SensorError",
     "SensorErrorCode",
     "SensorSnapshot",

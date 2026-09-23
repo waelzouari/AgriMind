@@ -12,7 +12,7 @@ import pytest
 
 from agrimind_edge.adapters.mqtt import PahoMqttTransport
 from agrimind_edge.config import MqttConfig, MqttCredentials
-from agrimind_edge.domain import MqttPublication
+from agrimind_edge.domain import MqttPublication, ReceivedMqttMessage
 
 
 class FakeSslContext:
@@ -28,7 +28,9 @@ class FakePahoClient:
         self.on_connect: Any = None
         self.on_connect_fail: Any = None
         self.on_disconnect: Any = None
+        self.on_message: Any = None
         self.publish_rc = mqtt.MQTT_ERR_SUCCESS
+        self.subscribe_rc = mqtt.MQTT_ERR_SUCCESS
         self.loop_start_rc = mqtt.MQTT_ERR_SUCCESS
 
     def username_pw_set(self, username: str, password: str) -> None:
@@ -53,6 +55,10 @@ class FakePahoClient:
     def publish(self, topic: str, payload: str, *, qos: int, retain: bool) -> object:
         self.operations.append(("publish", topic, payload, qos, retain))
         return SimpleNamespace(rc=self.publish_rc)
+
+    def subscribe(self, topic: str, *, qos: int) -> tuple[int, int]:
+        self.operations.append(("subscribe", topic, qos))
+        return self.subscribe_rc, 1
 
     def disconnect(self) -> None:
         self.operations.append(("disconnect",))
@@ -190,3 +196,45 @@ def test_adapter_reports_client_publish_failure() -> None:
 
     with pytest.raises(RuntimeError, match="not accepted"):
         transport.publish(MqttPublication("exact/telemetry", "{}", 1, False))
+
+
+def test_adapter_converts_paho_message_to_broker_neutral_message() -> None:
+    client = FakePahoClient()
+    transport = PahoMqttTransport(
+        config(),
+        MqttCredentials("placeholder-user", "placeholder-password"),
+        client=client,
+        ssl_context_factory=lambda **kwargs: FakeSslContext(),
+    )
+    received: list[ReceivedMqttMessage] = []
+
+    transport.subscribe("exact/commands/pump", 1, received.append)
+    client.on_message(
+        None,
+        None,
+        SimpleNamespace(
+            topic="exact/commands/pump",
+            payload=b'{"safe":"synthetic"}',
+            qos=1,
+            retain=False,
+        ),
+    )
+
+    assert received == [
+        ReceivedMqttMessage("exact/commands/pump", b'{"safe":"synthetic"}', 1, False)
+    ]
+    assert ("subscribe", "exact/commands/pump", 1) in client.operations
+
+
+def test_adapter_rejects_failed_subscription() -> None:
+    client = FakePahoClient()
+    client.subscribe_rc = mqtt.MQTT_ERR_NO_CONN
+    transport = PahoMqttTransport(
+        config(),
+        MqttCredentials("placeholder-user", "placeholder-password"),
+        client=client,
+        ssl_context_factory=lambda **kwargs: FakeSslContext(),
+    )
+
+    with pytest.raises(RuntimeError, match="subscription was not accepted"):
+        transport.subscribe("exact/commands/pump", 1, lambda message: None)

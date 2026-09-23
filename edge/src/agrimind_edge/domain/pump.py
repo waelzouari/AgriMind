@@ -20,6 +20,7 @@ class PumpDecisionCode(StrEnum):
     DURATION_EXCEEDS_LOCAL_LIMIT = "duration_exceeds_local_limit"
     EXPIRED_COMMAND = "expired_command"
     FUTURE_COMMAND = "future_command"
+    INVALID_COMMAND = "invalid_command"
     PUMP_ACTUATION_FAILED = "pump_actuation_failed"
     SCHEDULER_FAILED = "scheduler_failed"
     STATE_INCONSISTENT = "state_inconsistent"

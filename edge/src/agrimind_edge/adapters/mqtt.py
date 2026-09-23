@@ -9,9 +9,13 @@ from typing import Any
 
 import paho.mqtt.client as mqtt
 
-from agrimind_edge.application.mqtt_ports import ConnectionHandler, DisconnectionHandler
+from agrimind_edge.application.mqtt_ports import (
+    ConnectionHandler,
+    DisconnectionHandler,
+    MessageHandler,
+)
 from agrimind_edge.config.runtime import MqttConfig, MqttCredentials
-from agrimind_edge.domain.mqtt import MqttPublication
+from agrimind_edge.domain.mqtt import MqttPublication, ReceivedMqttMessage
 
 
 class PahoMqttTransport:
@@ -39,6 +43,7 @@ class PahoMqttTransport:
         self._on_connected: ConnectionHandler = lambda: None
         self._on_disconnected: DisconnectionHandler = lambda: None
         self._will_configured = False
+        self._message_handlers: dict[str, MessageHandler] = {}
 
         self._client.username_pw_set(credentials.username, credentials.password)
         context = ssl_context_factory(cafile=str(config.ca_file))
@@ -53,6 +58,7 @@ class PahoMqttTransport:
         self._client.on_connect = self._handle_connect
         self._client.on_connect_fail = self._handle_connect_fail
         self._client.on_disconnect = self._handle_disconnect
+        self._client.on_message = self._handle_message
 
     def set_connection_handlers(
         self,
@@ -92,6 +98,21 @@ class PahoMqttTransport:
         )
         if result.rc != mqtt.MQTT_ERR_SUCCESS:
             raise RuntimeError("MQTT publish was not accepted by the client")
+
+    def subscribe(self, topic: str, qos: int, handler: MessageHandler) -> None:
+        if not topic or "+" in topic or "#" in topic:
+            raise ValueError("MQTT subscription topic must be exact and non-empty")
+        if qos not in {0, 1, 2}:
+            raise ValueError("MQTT subscription QoS must be 0, 1, or 2")
+        previous_handler = self._message_handlers.get(topic)
+        self._message_handlers[topic] = handler
+        result, _message_id = self._client.subscribe(topic, qos=qos)
+        if result != mqtt.MQTT_ERR_SUCCESS:
+            if previous_handler is None:
+                self._message_handlers.pop(topic, None)
+            else:
+                self._message_handlers[topic] = previous_handler
+            raise RuntimeError("MQTT subscription was not accepted by the client")
 
     def disconnect(self) -> None:
         self._client.disconnect()
@@ -133,3 +154,21 @@ class PahoMqttTransport:
     ) -> None:
         del client, userdata, disconnect_flags, reason_code, properties
         self._on_disconnected()
+
+    def _handle_message(self, client: Any, userdata: Any, message: Any) -> None:
+        del client, userdata
+        handler = self._message_handlers.get(message.topic)
+        if handler is None:
+            self._logger.warning(
+                "mqtt_unhandled_message",
+                extra={"event": "mqtt_unhandled_message", "topic": message.topic},
+            )
+            return
+        handler(
+            ReceivedMqttMessage(
+                topic=message.topic,
+                payload=bytes(message.payload),
+                qos=message.qos,
+                retain=message.retain,
+            )
+        )

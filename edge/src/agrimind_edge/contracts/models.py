@@ -178,6 +178,14 @@ class PumpCommand(JsonContract):
 
     @classmethod
     def from_json(cls, payload: str | bytes, *, now: datetime | None = None) -> Self:
+        command = cls.from_json_without_expiry_validation(payload)
+        command.validate_not_expired(now)
+        return command
+
+    @classmethod
+    def from_json_without_expiry_validation(cls, payload: str | bytes) -> Self:
+        """Deserialize a complete v1 command while deferring expiry policy."""
+
         data = decode_json(payload)
         require_exact_fields(
             data,
@@ -196,7 +204,7 @@ class PumpCommand(JsonContract):
         raw_duration = data.get("duration_seconds")
         if raw_duration is not None and type(raw_duration) is not int:
             raise ValueError("duration_seconds must be an integer")
-        command = cls(
+        return cls(
             schema_version=require_schema_version(data["schema_version"]),
             command_id=parse_uuid(data["command_id"], "command_id"),
             farm_id=parse_uuid(data["farm_id"], "farm_id"),
@@ -207,8 +215,6 @@ class PumpCommand(JsonContract):
             requested_by=parse_uuid(data["requested_by"], "requested_by"),
             duration_seconds=raw_duration,
         )
-        command.validate_not_expired(now)
-        return command
 
 
 @dataclass(frozen=True, slots=True)

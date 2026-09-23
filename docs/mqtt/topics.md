@@ -160,10 +160,16 @@ Example on `.../commands/pump`:
 | `expires_at` | string | yes | UTC, strictly after issue time and future at receipt |
 | `requested_by` | string | yes | canonical non-zero user/service UUID for audit only |
 
-`requested_by` is not proof of authorization. Deserialization rejects expired
-commands, but future handlers must also match topic/payload identity,
-deduplicate `command_id`, authenticate the sender, apply local safety rules,
-and acknowledge the outcome. This contract does not perform GPIO actuation.
+`requested_by` is not proof of authorization. The default deserializer rejects
+expired commands. AGM-007 uses the explicit structural deserializer so the
+existing local command handler remains the sole authority for expiry and
+future-issued decisions. That path preserves every other v1 validation rule.
+This contract does not perform GPIO actuation.
+
+After every MQTT connection or reconnection, the edge subscribes again to its
+exact `TopicBuilder.pump_command()` topic at QoS 1. Retained commands and
+messages received on other topics are ignored without actuation. No production
+edge subscription uses a broad wildcard.
 
 ## Command acknowledgement
 
@@ -199,6 +205,22 @@ Example rejection on `.../acks/44444444-4444-4444-8444-444444444444`:
 Reason codes are stable codes, not free-form secret-bearing diagnostics.
 `accepted` means the edge accepted the request; `completed` means the requested
 action completed. A published command is neither.
+
+`invalid_command` is used only when a canonical non-zero `command_id` can be
+extracted but the complete v1 `PumpCommand` fails validation. The edge publishes
+a correlated `rejected` ACK without actuation. Invalid JSON and payloads with a
+missing or noncanonical `command_id` cannot be correlated, so they produce no
+ACK and are logged without including the untrusted payload.
+
+Valid ON commands produce `accepted` only after ON is confirmed, followed by
+`completed` or `failed` when the bounded automatic stop runs. Valid OFF commands
+produce `completed` directly after OFF is confirmed. Every ACK uses QoS 1 and
+`retain=false` on `TopicBuilder.acknowledgement(command_id)`.
+
+Exact duplicate commands replay the most recent stored ACK without another
+physical action. Reusing a `command_id` with different command content produces
+`command_id_conflict`. This idempotency cache is process-local and does not
+survive an edge-process or Raspberry Pi restart.
 
 ## Device status
 
@@ -280,11 +302,11 @@ agrimind/v1/farms/{farm_id}/devices/{device_id}/telemetry/tank_level
 agrimind/v1/farms/{farm_id}/devices/{device_id}/status/device
 ```
 
-AGM-006 grants no subscribe permission. A later command ticket may add only the
-exact `.../commands/pump` subscription after routing through the AGM-005 local
-handler. It must not add cross-farm access, `agrimind/#`, `+/devices/+`, or a
-broad device subtree. `DeviceAclPolicy` tests these vendor-neutral rules; the
-equivalent broker-specific syntax must be validated during deployment.
+AGM-007 adds only the exact `.../commands/pump` subscribe permission and the
+device-owned `.../acks/+` publish filter needed for correlated UUID ACK topics.
+It must not add cross-farm access, `agrimind/#`, `+/devices/+`, or a broad device
+subtree. `DeviceAclPolicy` tests these vendor-neutral rules; the equivalent
+broker-specific syntax must be validated during deployment.
 
 ## Supervised cloud validation
 
@@ -307,6 +329,30 @@ The unexpected-disconnect LWT delivery, bounded reconnect behavior, and
 cross-device ACL rejection were not exercised during that run. Their current
 coverage remains the automated transport-boundary and ACL policy tests; they
 still require supervised deployment validation.
+
+### AGM-007 fake-pump command validation
+
+From the repository root, explicitly start the supervised command path:
+
+```bash
+./.venv/bin/python -m agrimind_edge.entrypoints.mqtt_control_validate \
+  --env-file .env --run-seconds 120
+```
+
+The command prints the exact command topic, ACK wildcard, and a short-lived
+synthetic ON payload. Subscribe in the HiveMQ Web Client to the printed ACK
+wildcard, publish the sample payload at QoS 1 with retain disabled to the exact
+command topic, and observe `accepted` followed by `completed`. The entry point
+uses `FakePump` and `FakeScheduler`; it imports no GPIO and does not validate
+physical hardware. It keeps TLS certificate and hostname verification enabled
+and never prints MQTT credentials.
+
+On 2026-09-23, this supervised path was validated against HiveMQ Cloud with a
+five-second synthetic ON command. The edge published a correlated `accepted`
+ACK with `pump_state=true`, followed about five seconds later by `completed`
+with `pump_state=false`; both ACKs used the same `command_id`. The run used
+`FakePump`, imported no GPIO, and recorded no broker address or credential in
+the repository.
 
 ## Irrigation result
 

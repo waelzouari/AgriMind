@@ -8,7 +8,11 @@ from datetime import UTC, datetime
 from threading import RLock
 from uuid import UUID, uuid4
 
-from agrimind_edge.application.mqtt_ports import DeviceStatusSource, MqttTransport
+from agrimind_edge.application.mqtt_ports import (
+    DeviceStatusSource,
+    MessageHandler,
+    MqttTransport,
+)
 from agrimind_edge.application.telemetry import TelemetryMapper
 from agrimind_edge.contracts.enums import DeviceHealth
 from agrimind_edge.contracts.models import DeviceStatus
@@ -33,6 +37,7 @@ class CloudMqttService:
         topics: TopicBuilder,
         status_source: DeviceStatusSource,
         *,
+        command_message_handler: MessageHandler | None = None,
         clock: Callable[[], datetime] | None = None,
         message_id_factory: Callable[[], UUID] | None = None,
         logger: logging.Logger | None = None,
@@ -41,6 +46,7 @@ class CloudMqttService:
         self._mapper = mapper
         self._topics = topics
         self._status_source = status_source
+        self._command_message_handler = command_message_handler
         self._clock = clock or (lambda: datetime.now(UTC))
         self._message_id_factory = message_id_factory or uuid4
         self._logger = logger or logging.getLogger(__name__)
@@ -144,6 +150,21 @@ class CloudMqttService:
                     "mqtt_online_status_failed",
                     extra={"event": "mqtt_online_status_failed"},
                 )
+            if self._command_message_handler is not None:
+                try:
+                    self._transport.subscribe(
+                        self._topics.pump_command(),
+                        MQTT_QOS_AT_LEAST_ONCE,
+                        self._command_message_handler,
+                    )
+                except Exception:
+                    self._logger.warning(
+                        "mqtt_command_subscription_failed",
+                        extra={
+                            "event": "mqtt_command_subscription_failed",
+                            "topic": self._topics.pump_command(),
+                        },
+                    )
             self._logger.info(
                 "mqtt_connected",
                 extra={"event": "mqtt_connected", "state": self._state.value},

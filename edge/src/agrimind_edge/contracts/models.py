@@ -10,6 +10,7 @@ from uuid import UUID
 from agrimind_edge.contracts.enums import (
     AcknowledgementStatus,
     DeviceHealth,
+    IngestionAcknowledgementStatus,
     IrrigationOutcome,
     PumpAction,
     TelemetryMetric,
@@ -115,6 +116,89 @@ class Telemetry(JsonContract):
             unit=data["unit"],
             recorded_at=parse_utc_timestamp(data["recorded_at"], "recorded_at"),
             quality=enum_value(TelemetryQuality, data["quality"], "quality"),
+        )
+
+
+@dataclass(frozen=True, slots=True)
+class IngestionAcknowledgement(JsonContract):
+    message_id: UUID
+    farm_id: UUID
+    device_id: UUID
+    event_type: str
+    status: IngestionAcknowledgementStatus
+    occurred_at: datetime
+    reason_code: str | None = None
+    schema_version: int = SCHEMA_VERSION
+
+    def __post_init__(self) -> None:
+        require_schema_version(self.schema_version)
+        for field, value in (
+            ("message_id", self.message_id),
+            ("farm_id", self.farm_id),
+            ("device_id", self.device_id),
+        ):
+            if value.int == 0:
+                raise ValueError(f"{field} must be non-zero")
+        if self.event_type != "telemetry":
+            raise ValueError("event_type must be telemetry")
+        format_utc_timestamp(self.occurred_at, "occurred_at")
+        if self.status is IngestionAcknowledgementStatus.REJECTED:
+            if not self.reason_code:
+                raise ValueError("reason_code is required for rejected ingestion acknowledgements")
+        elif self.reason_code is not None:
+            raise ValueError("reason_code is only valid for rejected ingestion acknowledgements")
+        if self.reason_code is not None and (
+            len(self.reason_code) > 64
+            or not self.reason_code.replace("_", "").isalnum()
+            or self.reason_code.lower() != self.reason_code
+        ):
+            raise ValueError("reason_code must be lowercase snake_case up to 64 characters")
+
+    def to_dict(self) -> dict[str, object]:
+        data: dict[str, object] = {
+            "schema_version": self.schema_version,
+            "message_id": str(self.message_id),
+            "farm_id": str(self.farm_id),
+            "device_id": str(self.device_id),
+            "event_type": self.event_type,
+            "status": self.status.value,
+            "occurred_at": format_utc_timestamp(self.occurred_at, "occurred_at"),
+        }
+        if self.reason_code is not None:
+            data["reason_code"] = self.reason_code
+        return data
+
+    @classmethod
+    def from_json(cls, payload: str | bytes) -> Self:
+        data = decode_json(payload)
+        require_exact_fields(
+            data,
+            required={
+                "schema_version",
+                "message_id",
+                "farm_id",
+                "device_id",
+                "event_type",
+                "status",
+                "occurred_at",
+            },
+            optional={"reason_code"},
+        )
+        event_type = data["event_type"]
+        reason = data.get("reason_code")
+        if not isinstance(event_type, str):
+            raise ValueError("event_type must be a string")
+        if reason is not None and not isinstance(reason, str):
+            raise ValueError("reason_code must be a string")
+        return cls(
+            schema_version=require_schema_version(data["schema_version"]),
+            message_id=parse_uuid(data["message_id"], "message_id"),
+            farm_id=parse_uuid(data["farm_id"], "farm_id"),
+            device_id=parse_uuid(data["device_id"], "device_id"),
+            event_type=event_type,
+            status=enum_value(IngestionAcknowledgementStatus, data["status"], "status"),
+            occurred_at=parse_utc_timestamp(data["occurred_at"], "occurred_at"),
+            reason_code=reason,
         )
 
 

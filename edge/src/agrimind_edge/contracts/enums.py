@@ -27,6 +27,12 @@ class AcknowledgementStatus(StrEnum):
     FAILED = "failed"
 
 
+class IngestionAcknowledgementStatus(StrEnum):
+    PERSISTED = "persisted"
+    DUPLICATE = "duplicate"
+    REJECTED = "rejected"
+
+
 class DeviceHealth(StrEnum):
     HEALTHY = "healthy"
     DEGRADED = "degraded"

@@ -296,9 +296,17 @@ OFFLINE, then restore connectivity and verify bounded reconnect plus refreshed
 ONLINE status. Attempt cross-device publishing and confirm the broker rejects
 it. Rotate/delete the test credentials afterward.
 
-This procedure was not run for AGM-006. Cloud MQTT behavior is validated
-through automated transport-boundary tests; real broker validation remains
-pending.
+On 2026-09-23, a supervised HiveMQ Cloud run loaded credentials from the
+ignored repository-root `.env` and confirmed the verified-TLS connection,
+retained ONLINE status, four QoS 1 non-retained telemetry publications
+(temperature, humidity, soil moisture, and tank level), and retained OFFLINE
+status after graceful shutdown. Credentials and broker details are not
+recorded in the repository.
+
+The unexpected-disconnect LWT delivery, bounded reconnect behavior, and
+cross-device ACL rejection were not exercised during that run. Their current
+coverage remains the automated transport-boundary and ACL policy tests; they
+still require supervised deployment validation.
 
 ## Irrigation result
 

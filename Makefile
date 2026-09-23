@@ -1,13 +1,27 @@
-.PHONY: bootstrap format lint typecheck test db-test secrets repo-check check
+.PHONY: bootstrap format lint typecheck test backend-format backend-lint backend-typecheck backend-test db-test secrets repo-check check
 
 bootstrap:
 	python3 -m pip install -e "./edge[dev]"
+	python3 -m pip install -e "./backend/services/ingestion[dev]"
 
 format:
 	python3 -m ruff format edge/src edge/tests scripts
+	python3 -m ruff format backend/services/ingestion/src backend/services/ingestion/tests
 
 lint:
 	python3 -m ruff check edge/src edge/tests scripts
+
+backend-format:
+	python3 -m ruff format --check backend/services/ingestion/src backend/services/ingestion/tests
+
+backend-lint:
+	python3 -m ruff check backend/services/ingestion/src backend/services/ingestion/tests
+
+backend-typecheck:
+	python3 -m mypy --config-file backend/services/ingestion/pyproject.toml backend/services/ingestion/src
+
+backend-test:
+	python3 -m pytest -q backend/services/ingestion/tests
 
 typecheck:
 	python3 -m mypy edge/src scripts
@@ -24,4 +38,4 @@ secrets: # pragma: allowlist secret
 repo-check:
 	python3 scripts/check_repository.py
 
-check: lint typecheck test secrets repo-check
+check: lint typecheck test backend-format backend-lint backend-typecheck backend-test secrets repo-check

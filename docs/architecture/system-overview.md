@@ -113,7 +113,8 @@ hard duration and hardware safety limits.
 - Supabase is the durable user-facing history after acknowledged ingestion.
 - The Cloud schema relates Auth users to farms through memberships, then farms
   to devices and canonical v1 event rows. Contract IDs are database
-  deduplication keys; RLS and ingestion are added by AGM-011/012.
+  deduplication keys; AGM-011 RLS protects client reads and AGM-012 restricted
+  RPCs authorize trusted telemetry/status writes against the device registry.
 - MQTT is transport, never durable business storage.
 - The model recommendation is advisory input; the edge safety gate owns the
   final actuation decision.
@@ -173,6 +174,11 @@ committed unless licensing and size policy permit it.
   logged. Payload `user_id` is audit metadata, not authorization proof.
 - The mobile app has only the Supabase anonymous key and user JWT; never a
   service-role key or shared device secret.
+- The independently deployed ingestion worker is the only application allowed
+  to hold `service_role`; the key is forbidden on Flutter and Raspberry Pi.
+- MQTT authenticates per-device principals and exact broker ACLs limit their
+  publish topics. Ingestion still treats topic/payload farm IDs as assertions
+  and derives authority from `devices.farm_id`.
 - Edge secrets live in a root-readable environment file or secret manager, not
   Git. TLS verification is mandatory in cloud mode.
 - Broker selection is single-active: local Mosquitto can mirror pending Cloud

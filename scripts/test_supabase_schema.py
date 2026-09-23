@@ -17,6 +17,10 @@ AGM_011_MIGRATION = (
     ROOT / "backend/supabase/migrations/20260923150000_agm_011_auth_rls.sql"
 )
 AGM_011_TESTS = ROOT / "backend/supabase/tests/agm_011_rls_test.sql"
+AGM_012_MIGRATION = (
+    ROOT / "backend/supabase/migrations/20260923160000_agm_012_secure_ingestion.sql"
+)
+AGM_012_TESTS = ROOT / "backend/supabase/tests/agm_012_ingestion_test.sql"
 
 
 def _run(command: list[str]) -> None:
@@ -35,6 +39,8 @@ def run_clean_database() -> None:
             AGM_010_TESTS,
             AGM_011_MIGRATION,
             AGM_011_TESTS,
+            AGM_012_MIGRATION,
+            AGM_012_TESTS,
         ):
             _run(
                 [
@@ -59,7 +65,10 @@ def main() -> int:
         raise RuntimeError(f"missing PostgreSQL tools: {', '.join(missing)}")
     run_clean_database()
     run_clean_database()
-    print("AGM-010/011 schema, RLS, and isolation tests passed twice from clean state.")
+    print(
+        "AGM-010/011/012 schema, RLS, and trusted ingestion tests passed "
+        "twice from clean state."
+    )
     return 0
 
 

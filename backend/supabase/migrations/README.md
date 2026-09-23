@@ -28,3 +28,9 @@ AGM-011 intentionally creates no Storage bucket because the P0 data flows use
 structured records only. A private, farm-scoped bucket belongs with the P1
 Computer Vision capability when file storage is actually required. Secure
 device provisioning and ingestion remain AGM-012 work.
+
+AGM-012 adds service-role-only telemetry and device-status RPCs. They lock and
+authorize the registered device, derive its authoritative farm, preserve
+primary-key idempotency, detect conflicting reuse of a message ID, and update
+`last_seen_at` only after a new accepted event. AGM-011 policies and grants for
+anonymous/authenticated clients remain unchanged.

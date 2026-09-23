@@ -2,17 +2,22 @@ import 'package:agrimind/app/app_route.dart';
 import 'package:agrimind/core/widgets/widgets.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/presentation/authentication_gate.dart';
+import 'package:agrimind/features/onboarding/application/farm_controller.dart';
 import 'package:flutter/material.dart';
 
 abstract final class AppRouter {
   static Route<void> onGenerateRoute(
     RouteSettings settings,
     AuthenticationController authentication,
+    FarmController farmController,
   ) {
     if (settings.name == AppRoute.signIn || settings.name == AppRoute.home) {
       return MaterialPageRoute<void>(
         settings: settings,
-        builder: (_) => AuthenticationGate(controller: authentication),
+        builder: (_) => AuthenticationGate(
+          controller: authentication,
+          farmController: farmController,
+        ),
       );
     }
     return MaterialPageRoute<void>(

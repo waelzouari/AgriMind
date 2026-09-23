@@ -11,6 +11,7 @@ from uuid import UUID
 from agrimind_edge.config.hardware import HardwareConfig
 from agrimind_edge.contracts.models import MAX_PUMP_DURATION_SECONDS
 from agrimind_edge.contracts.validation import TOPIC_VERSION, parse_uuid
+from agrimind_edge.domain.broker import FailoverPolicy
 
 _HOST_PATTERN = re.compile(r"^[a-zA-Z0-9](?:[a-zA-Z0-9.-]{0,251}[a-zA-Z0-9])?$")
 
@@ -127,12 +128,16 @@ class RuntimeConfig:
     credentials: MqttCredentials = field(repr=False)
     hardware: HardwareConfig = field(default_factory=HardwareConfig)
     persistence: PersistenceConfig = field(default_factory=PersistenceConfig)
+    local_mqtt: MqttConfig | None = None
+    local_credentials: MqttCredentials | None = field(default=None, repr=False)
+    failover: FailoverPolicy = field(default_factory=FailoverPolicy)
 
     def __repr__(self) -> str:
         return (
             f"RuntimeConfig(mqtt={self.mqtt!r}, pump_safety={self.pump_safety!r}, "
             f"credentials={self.credentials!r}, hardware={self.hardware!r}, "
-            f"persistence={self.persistence!r})"
+            f"persistence={self.persistence!r}, local_mqtt={self.local_mqtt!r}, "
+            f"local_credentials={self.local_credentials!r}, failover={self.failover!r})"
         )
 
     @classmethod
@@ -162,6 +167,45 @@ class RuntimeConfig:
             username=_required(environment, "AGRIMIND_MQTT_USERNAME"),
             password=_required(environment, "AGRIMIND_MQTT_PASSWORD"),
         )
+        failover = FailoverPolicy(
+            enabled=_boolean(environment, "AGRIMIND_MQTT_FAILOVER_ENABLED", False),
+            cloud_failure_threshold=_integer(
+                environment, "AGRIMIND_MQTT_CLOUD_FAILURE_THRESHOLD", 3
+            ),
+            failover_delay_seconds=_integer(
+                environment, "AGRIMIND_MQTT_FAILOVER_DELAY_SECONDS", 30
+            ),
+            local_min_active_seconds=_integer(
+                environment, "AGRIMIND_MQTT_LOCAL_MIN_ACTIVE_SECONDS", 60
+            ),
+            cloud_probe_interval_seconds=_integer(
+                environment, "AGRIMIND_MQTT_CLOUD_PROBE_INTERVAL_SECONDS", 30
+            ),
+            cloud_stability_seconds=_integer(
+                environment, "AGRIMIND_MQTT_CLOUD_STABILITY_SECONDS", 30
+            ),
+        )
+        local_mqtt = None
+        local_credentials = None
+        if failover.enabled:
+            local_tls = _boolean(environment, "AGRIMIND_LOCAL_MQTT_TLS_ENABLED", False)
+            local_ca = environment.get("AGRIMIND_LOCAL_MQTT_CA_FILE", "").strip()
+            local_mqtt = MqttConfig(
+                farm_id=farm_id,
+                device_id=device_id,
+                host=_required(environment, "AGRIMIND_LOCAL_MQTT_HOST"),
+                port=_integer(environment, "AGRIMIND_LOCAL_MQTT_PORT", 1883),
+                tls_enabled=local_tls,
+                ca_file=Path(local_ca) if local_ca else None,
+                telemetry_interval_seconds=mqtt.telemetry_interval_seconds,
+                keepalive_seconds=mqtt.keepalive_seconds,
+                reconnect_min_seconds=mqtt.reconnect_min_seconds,
+                reconnect_max_seconds=mqtt.reconnect_max_seconds,
+            )
+            local_credentials = MqttCredentials(
+                _required(environment, "AGRIMIND_LOCAL_MQTT_USERNAME"),
+                _required(environment, "AGRIMIND_LOCAL_MQTT_PASSWORD"),
+            )
         return cls(
             mqtt=mqtt,
             pump_safety=PumpSafetyConfig(
@@ -182,4 +226,7 @@ class RuntimeConfig:
                     ).strip()
                 )
             ),
+            local_mqtt=local_mqtt,
+            local_credentials=local_credentials,
+            failover=failover,
         )

@@ -1,5 +1,6 @@
 """Hardware-independent domain models."""
 
+from agrimind_edge.domain.broker import BrokerState, FailoverPolicy
 from agrimind_edge.domain.mqtt import (
     DeviceRuntimeStatus,
     MqttConnectionState,
@@ -31,10 +32,12 @@ from agrimind_edge.domain.sensors import (
 __all__ = [
     "AirReading",
     "AutomaticStopResult",
+    "BrokerState",
     "DeviceRuntimeStatus",
     "EdgeEvent",
     "EdgeEventType",
     "EnqueueResult",
+    "FailoverPolicy",
     "Measurement",
     "MqttConnectionState",
     "MqttPublication",

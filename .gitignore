@@ -50,6 +50,8 @@ ai/**/artifacts/*
 *.db
 *.sqlite
 *.sqlite3
+*.passwd
+deploy/mosquitto/*.acl
 *.log
 logs/
 data/

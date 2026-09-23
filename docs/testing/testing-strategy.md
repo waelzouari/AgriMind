@@ -33,6 +33,9 @@ recovery receive the same attention as happy paths.
 - Persistence: idempotent migrations, atomic event/outbox insertion, ordered
   restart recovery, PUBACK-gated delivery, 24-hour retention, failure fallback,
   and command idempotence across restart using temporary SQLite and fake MQTT.
+- Failover: Cloud-first selection, threshold/delay/cooldown behavior, a single
+  active command subscription, passive Cloud recovery, local PUBACK isolation,
+  Cloud outbox drain, cross-broker idempotency, and secret-safe configuration.
 - Integration: fake hardware plus local Mosquitto; duplicate QoS 1 delivery;
   retained-command protection; disconnect/reconnect; SQLite restart recovery;
   ingestion acknowledgement.

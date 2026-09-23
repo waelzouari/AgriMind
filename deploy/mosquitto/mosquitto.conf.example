@@ -1,0 +1,10 @@
+# Render and install outside Git; never commit password or private-key files.
+listener 1883 127.0.0.1
+allow_anonymous false
+password_file /etc/mosquitto/agrimind.passwd
+acl_file /etc/mosquitto/agrimind.acl
+persistence true
+persistence_location /var/lib/mosquitto/
+log_type error
+log_type warning
+log_type notice

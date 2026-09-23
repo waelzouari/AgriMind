@@ -1,0 +1,7 @@
+# Replace placeholders during provisioning. Do not grant a runtime '#'.
+user agrimind-device-DEVICE_ID
+topic write agrimind/v1/farms/FARM_ID/devices/DEVICE_ID/telemetry/+
+topic write agrimind/v1/farms/FARM_ID/devices/DEVICE_ID/status/device
+topic write agrimind/v1/farms/FARM_ID/devices/DEVICE_ID/acks/+
+topic write agrimind/v1/farms/FARM_ID/devices/DEVICE_ID/events/irrigation_result
+topic read agrimind/v1/farms/FARM_ID/devices/DEVICE_ID/commands/pump

@@ -2,6 +2,7 @@
 
 Status: AGM-003 defines contracts; AGM-006/007 implement cloud lifecycle,
 telemetry, commands, and ACKs; AGM-008 durably buffers telemetry and ACKs.
+AGM-009 adds single-active local Mosquitto fallback without changing v1 topics.
 
 ## AGM-006 connection lifecycle
 
@@ -38,6 +39,11 @@ While disconnected, telemetry is inserted into the local SQLite event/outbox
 store. Reconnection requests an ordered background drain so the Paho callback
 is not blocked. ACKs use the same durable path. Device presence and LWT remain
 direct retained publications and are never inserted into the outbox.
+
+During local fallback, the same exact topics and QoS rules apply. Only the
+active broker receives the command subscription. Local PUBACKs never mark the
+Cloud outbox delivered; pending events are replayed to Cloud after controlled
+recovery. Broker selection never changes command validation or pump safety.
 
 ## Common rules
 

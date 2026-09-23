@@ -134,6 +134,19 @@ stop outcomes replace the earlier accepted outcome for subsequent replay.
 The register survives a process restart and is lookup-only at startup: stored
 commands are never executed or replayed into the pump.
 
+## Local MQTT fallback (AGM-009)
+
+An explicitly enabled single-active coordinator keeps HiveMQ Cloud primary and
+uses authenticated Mosquitto only after configurable failure and delay gates.
+Cloud recovery is observed before promotion; the local command subscription is
+removed before the Cloud subscription is restored. Both routes share the same
+processor, handler, SQLite idempotency register, controller, and pump port.
+
+Local telemetry and ACK PUBACKs are mirrors, not Cloud delivery evidence. The
+Cloud outbox remains pending and drains after stable Cloud recovery. When both
+brokers are unavailable, AGM-008 buffering and all local safety behavior remain
+active. See `docs/runbooks/mqtt-failover.md`.
+
 The v1 wire contract permits 1-600 seconds. The local
 `AGRIMIND_PUMP_MAX_DURATION_SECONDS` must also be 1-600 and defaults to 600 so
 no unverified agronomic limit is invented. Requests above the configured local

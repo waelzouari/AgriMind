@@ -47,5 +47,5 @@ jobs:
       PGPASSWORD: postgres # pragma: allowlist secret
     steps:
       - uses: actions/checkout@v4
-      - name: Validate migrations and constraints twice from a clean database
+      - name: Validate migrations, constraints, RLS, and isolation twice
         run: python3 scripts/test_supabase_schema.py

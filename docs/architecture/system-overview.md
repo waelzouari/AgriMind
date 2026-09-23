@@ -178,10 +178,12 @@ committed unless licensing and size policy permit it.
 - Broker selection is single-active: local Mosquitto can mirror pending Cloud
   events, but its PUBACK never marks the Cloud outbox delivered. Both broker
   paths share the same command handler and persistent idempotency register.
-- RLS is tested with two-user negative cases for every exposed table and Storage
-  bucket.
-- Images use private buckets and signed access; inference input type, size, and
-  decode limits are enforced.
+- RLS is tested with owner/member/non-member/anonymous identities and two-farm
+  negative cases for every application table.
+- AGM-011 intentionally creates no Storage bucket. The P1 Computer Vision work
+  must introduce a private, farm-scoped bucket with isolation tests and signed
+  access when image storage is actually required; inference input type, size,
+  and decode limits remain mandatory then.
 
 ## Architecture decisions to record during implementation
 

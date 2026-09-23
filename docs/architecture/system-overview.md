@@ -168,6 +168,16 @@ committed unless licensing and size policy permit it.
 
 ## Security boundaries
 
+AGM-015 adds a narrow Flutter authentication boundary: widgets depend on an
+authentication controller, the controller depends on an application repository
+port, and the Supabase adapter is the only layer that calls Supabase Auth. The
+state model is explicitly `restoring`, `unauthenticated`, or `authenticated`.
+During startup the route gate remains on a neutral loading view until the SDK's
+persisted session is resolved; sign-out or an invalid/expired session event
+returns every protected route to sign-in. The SDK owns token persistence and
+refresh. This client-side gate improves navigation behavior but does not replace
+AGM-011 RLS authorization.
+
 - Broker ACLs restrict devices to their farm telemetry/status and command
   subscriptions; users receive only authorized farm topics.
 - Commands are schema-validated, expiry-bounded, idempotent, allow-listed, and

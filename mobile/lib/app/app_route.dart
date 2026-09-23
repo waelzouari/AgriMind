@@ -1,3 +1,4 @@
 abstract final class AppRoute {
-  static const foundation = '/';
+  static const signIn = '/';
+  static const home = '/home';
 }

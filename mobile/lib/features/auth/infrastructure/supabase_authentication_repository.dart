@@ -36,10 +36,8 @@ final class SupabaseAuthenticationRepository
         );
       }
       return session;
-    } on AuthException {
-      throw const AuthenticationFailure(
-        AuthenticationFailureType.invalidCredentials,
-      );
+    } on AuthException catch (error) {
+      throw mapSupabaseAuthException(error);
     } on AuthenticationFailure {
       rethrow;
     } on Object {
@@ -61,4 +59,28 @@ final class SupabaseAuthenticationRepository
     if (user == null) return null;
     return domain.AuthSession(userId: user.id, email: user.email);
   }
+}
+
+AuthenticationFailure mapSupabaseAuthException(AuthException error) {
+  const rejectedCredentialCodes = {'invalid_credentials', 'user_not_found'};
+  if (rejectedCredentialCodes.contains(error.code)) {
+    return const AuthenticationFailure(
+      AuthenticationFailureType.invalidCredentials,
+    );
+  }
+
+  if (error.code == 'email_not_confirmed') {
+    return const AuthenticationFailure(
+      AuthenticationFailureType.emailNotConfirmed,
+    );
+  }
+
+  final statusCode = int.tryParse(error.statusCode ?? '');
+  if (error is AuthRetryableFetchException ||
+      statusCode == 429 ||
+      (statusCode != null && statusCode >= 500)) {
+    return const AuthenticationFailure(AuthenticationFailureType.unavailable);
+  }
+
+  return const AuthenticationFailure(AuthenticationFailureType.unknown);
 }

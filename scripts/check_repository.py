@@ -15,6 +15,7 @@ REQUIRED_PATHS = (
     "contracts/v1/command-acknowledgement.schema.json",
     "contracts/v1/device-status.schema.json",
     "contracts/v1/irrigation-result.schema.json",
+    "contracts/v1/ingestion-acknowledgement.schema.json",
     "contracts/README.md",
     "docs/adrs/ADR-001-monorepo-and-boundaries.md",
     "docs/configuration.md",

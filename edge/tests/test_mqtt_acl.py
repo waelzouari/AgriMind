@@ -18,14 +18,18 @@ def test_device_acl_allows_only_exact_own_publish_topics() -> None:
     assert not policy.can_publish(own.pump_command())
 
 
-def test_agm007_allows_only_exact_own_command_subscription() -> None:
+def test_device_can_subscribe_only_to_own_command_and_ingestion_ack_topics() -> None:
     topics = TopicBuilder(UUID(int=1), UUID(int=2))
     other = TopicBuilder(UUID(int=3), UUID(int=4))
     policy = DeviceAclPolicy(topics)
 
-    assert policy.subscribe_topics == frozenset({topics.pump_command()})
+    assert policy.subscribe_topics == frozenset(
+        {topics.pump_command(), topics.ingestion_acknowledgement_filter()}
+    )
     assert policy.can_subscribe(topics.pump_command())
+    assert policy.can_subscribe(topics.ingestion_acknowledgement_filter())
     assert not policy.can_subscribe(other.pump_command())
+    assert not policy.can_subscribe(other.ingestion_acknowledgement_filter())
     assert not policy.can_subscribe(f"{topics.base}/#")
 
 

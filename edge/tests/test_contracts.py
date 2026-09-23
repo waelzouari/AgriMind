@@ -11,6 +11,7 @@ from jsonschema import Draft202012Validator, FormatChecker
 from agrimind_edge.contracts.enums import (
     AcknowledgementStatus,
     DeviceHealth,
+    IngestionAcknowledgementStatus,
     IrrigationOutcome,
     PumpAction,
     TelemetryMetric,
@@ -18,6 +19,7 @@ from agrimind_edge.contracts.enums import (
 from agrimind_edge.contracts.models import (
     CommandAcknowledgement,
     DeviceStatus,
+    IngestionAcknowledgement,
     IrrigationResult,
     PumpCommand,
     Telemetry,
@@ -100,12 +102,24 @@ def test_valid_v1_contracts_round_trip_deterministically() -> None:
         result=IrrigationOutcome.INCREASED,
         completed_at=NOW,
     )
+    ingestion_acknowledgement = IngestionAcknowledgement(
+        message_id=MESSAGE_ID,
+        farm_id=FARM_ID,
+        device_id=DEVICE_ID,
+        event_type="telemetry",
+        status=IngestionAcknowledgementStatus.PERSISTED,
+        occurred_at=NOW,
+    )
 
     assert Telemetry.from_json(telemetry.to_json()) == telemetry
     assert PumpCommand.from_json(command.to_json(), now=NOW) == command
     assert CommandAcknowledgement.from_json(acknowledgement.to_json()) == acknowledgement
     assert DeviceStatus.from_json(status.to_json()) == status
     assert IrrigationResult.from_json(result.to_json()) == result
+    assert (
+        IngestionAcknowledgement.from_json(ingestion_acknowledgement.to_json())
+        == ingestion_acknowledgement
+    )
     assert telemetry.to_json() == telemetry.to_json()
 
 
@@ -260,6 +274,18 @@ def test_irrigation_delta_and_outcome_must_be_consistent() -> None:
                 status=AcknowledgementStatus.REJECTED,
                 occurred_at=NOW,
                 reason_code="invalid_command",
+            ).to_dict(),
+        ),
+        (
+            "ingestion-acknowledgement.schema.json",
+            IngestionAcknowledgement(
+                message_id=MESSAGE_ID,
+                farm_id=FARM_ID,
+                device_id=DEVICE_ID,
+                event_type="telemetry",
+                status=IngestionAcknowledgementStatus.REJECTED,
+                occurred_at=NOW,
+                reason_code="stale_message",
             ).to_dict(),
         ),
         (

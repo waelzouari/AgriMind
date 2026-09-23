@@ -380,6 +380,28 @@ cross-device ACL rejection were not exercised during that run. Their current
 coverage remains the automated transport-boundary and ACL policy tests; they
 still require supervised deployment validation.
 
+## AGM-017 mobile telemetry subscription
+
+The authenticated Flutter app resolves its RLS-visible farm and exactly one
+active device before opening MQTT. Its dedicated MVP broker principal has only
+Subscribe permission on the exact provisioned filter:
+
+```text
+agrimind/v1/farms/{farm_id}/devices/{device_id}/telemetry/+
+```
+
+The client requests QoS 1, validates every v1 payload and topic identity, and
+resubscribes after automatic reconnect. It cannot publish and has no access to
+`status/device`, commands, command ACKs, sync ACKs, or irrigation events.
+Therefore broker connectivity is displayed as the **mobile MQTT session**, not
+as physical device presence. Telemetry timestamps independently drive live,
+waiting, and stale-data presentation.
+
+The HiveMQ Free/Serverless MVP uses a manually provisioned static mobile
+credential. This is a prototype limitation: a production multi-user system
+needs short-lived farm-scoped broker identities or a trusted token exchange.
+No broker password is stored in Git.
+
 ### AGM-007 fake-pump command validation
 
 From the repository root, explicitly start the supervised command path:

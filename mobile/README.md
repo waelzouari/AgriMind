@@ -1,7 +1,8 @@
 # AgriMind mobile
 
 Flutter application foundation, centralized design system, Supabase
-authentication/session boundary, and minimal AGM-016 one-farm onboarding.
+authentication/session boundary, one-farm onboarding, and the AGM-017 live
+telemetry dashboard.
 
 ## Prerequisites
 
@@ -21,13 +22,18 @@ From `mobile/`:
 flutter pub get
 flutter run \
   --dart-define=AGRIMIND_SUPABASE_URL=https://PROJECT.supabase.co \
-  --dart-define=AGRIMIND_SUPABASE_ANON_KEY=PUBLIC_CLIENT_KEY
+  --dart-define=AGRIMIND_SUPABASE_ANON_KEY=PUBLIC_CLIENT_KEY \
+  --dart-define=AGRIMIND_MOBILE_MQTT_HOST=CLUSTER.s1.eu.hivemq.cloud \
+  --dart-define=AGRIMIND_MOBILE_MQTT_USERNAME=agrimind-mobile-mvp \
+  --dart-define=AGRIMIND_MOBILE_MQTT_PASSWORD=LOCAL_SECRET
 ```
 
 Select an Android or iOS target supported by the host development environment.
-Only the public Supabase URL and anonymous/publishable client key belong in
-these defines. Never pass a service-role key, database password, JWT secret,
-MQTT credential, or other privileged credential to Flutter.
+Never put real values in this README, tracked files, shell history, or CI logs.
+The mobile MQTT password is supplied locally for the TecWeek build only; it is
+extractable from a distributed app and is not a production secret-delivery
+design. Never pass a service-role key, database password, JWT secret, edge
+credential, ingestion credential, or other privileged value to Flutter.
 
 ## Project structure
 
@@ -41,6 +47,7 @@ lib/
 │   ├── pages/           # AGM-014 technical showcase
 │   └── widgets/         # Shared accessible UI primitives
 ├── features/auth/       # Auth domain, application port, Supabase adapter, UI
+├── features/dashboard/  # Device lookup, MQTT adapter, live state and UI
 ├── features/onboarding/ # One-farm state, repository, Supabase RPC adapter, UI
 └── main.dart            # Application entry point
 test/                    # Offline unit and widget tests
@@ -73,21 +80,22 @@ flutter analyze
 flutter test
 ```
 
-Tests use authentication and farm repository fakes. They are offline and
-require no broker, Supabase project, Raspberry Pi, GPIO, or Internet connection.
+Tests use repository and MQTT-wire fakes. They are offline and require no
+broker, Supabase project, Raspberry Pi, GPIO, or Internet connection.
 
 ## Configuration and security
 
-`AppConfig` contains only the Supabase URL and anonymous/publishable client key.
+`AppConfig` contains the public Supabase values and narrow AGM-017 mobile MQTT
+settings. It requires TLS port 8883 and never logs its contents.
 `supabase_flutter` owns persisted user-session storage and token refresh; the
 application does not create a second token store. Startup remains on a neutral
 loading screen until restoration completes, and all known application routes
 pass through the authentication gate.
 
 Authentication errors shown to users are stable, generic messages and must
-never contain provider exceptions, passwords, tokens, or credentials. Do not
-add MQTT credentials, Supabase service-role keys, database passwords, private
-keys, or other privileged values to Flutter or Git.
+never contain provider exceptions, passwords, tokens, or credentials. Never
+commit MQTT credentials or add Supabase service-role keys, database passwords,
+private keys, or other privileged values to Flutter or Git.
 
 The generated Android application ID and iOS bundle identifier are temporarily
 `com.example.agrimind`. They are scaffold values, not an approved production
@@ -107,6 +115,34 @@ directly and never supplies an identity or role. A failed or ambiguous creation
 is recovered by reading again before another write, while the RPC provides
 server-side idempotence and concurrency serialization.
 
+## Live telemetry dashboard
+
+After authentication and farm resolution, the app queries the RLS-visible
+`devices` rows and requires exactly one active device. Only then does it connect
+over verified TLS and subscribe with QoS 1 to:
+
+```text
+agrimind/v1/farms/{farm_id}/devices/{device_id}/telemetry/+
+```
+
+The adapter accepts only canonical v1 temperature, humidity, soil-moisture and
+tank-level payloads matching the resolved identity and topic metric. Malformed,
+wrong-identity, duplicate, and older messages are ignored. Values are never
+synthesized in production. Data becomes stale after 30 seconds by default;
+`AGRIMIND_MOBILE_TELEMETRY_STALE_SECONDS` accepts 5 through 3600 seconds.
+
+The broker ACL deliberately excludes `status/device`. The UI therefore says
+`MQTT connecté`, `MQTT déconnecté`, `Données en direct`, `Données anciennes`, or
+`En attente des premières mesures`; it never derives physical-device presence
+from the phone's broker session. Logout disposes MQTT and clears dashboard
+state.
+
+HiveMQ Free/Serverless currently requires a manually provisioned static,
+subscribe-only credential scoped to the single MVP farm/device telemetry
+filter. Production must replace it with short-lived, user/farm-scoped broker
+identity issued through a trusted token exchange or equivalent integration.
+The mobile ACL must not be broadened to the device subtree.
+
 ### Optional real-Supabase onboarding validation
 
 After applying the AGM-016 migration to the intended project, run with the
@@ -123,6 +159,6 @@ suite. Never provide Flutter with `service_role` to perform it.
 
 ## Explicitly out of scope
 
-AGM-016 does not implement registration, password reset, multi-farm switching,
-live sensors, a real dashboard, MQTT, irrigation, weather, farm management,
+AGM-017 does not implement registration, password reset, multi-farm switching,
+physical device presence, irrigation, weather, farm management,
 inspection, history, notifications, ML, Computer Vision, or backend logic.

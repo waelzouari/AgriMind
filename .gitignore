@@ -65,3 +65,6 @@ data/
 # Local reports and scratch files
 tmp/
 reports/
+
+# Local secrets - never commit
+.secrets/

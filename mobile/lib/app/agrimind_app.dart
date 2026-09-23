@@ -5,6 +5,7 @@ import 'package:agrimind/core/config/app_config.dart';
 import 'package:agrimind/core/design_system/agrimind_theme.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/presentation/authentication_gate.dart';
+import 'package:agrimind/features/dashboard/presentation/dashboard_session.dart';
 import 'package:agrimind/features/onboarding/application/farm_controller.dart';
 import 'package:flutter/material.dart';
 
@@ -13,12 +14,14 @@ class AgriMindApp extends StatefulWidget {
     required this.config,
     required this.authentication,
     required this.farmController,
+    required this.dashboardControllerFactory,
     super.key,
   });
 
   final AppConfig config;
   final AuthenticationController authentication;
   final FarmController farmController;
+  final DashboardControllerFactory dashboardControllerFactory;
 
   @override
   State<AgriMindApp> createState() => _AgriMindAppState();
@@ -57,11 +60,13 @@ class _AgriMindAppState extends State<AgriMindApp> {
       home: AuthenticationGate(
         controller: widget.authentication,
         farmController: widget.farmController,
+        dashboardControllerFactory: widget.dashboardControllerFactory,
       ),
       onGenerateRoute: (settings) => AppRouter.onGenerateRoute(
         settings,
         widget.authentication,
         widget.farmController,
+        widget.dashboardControllerFactory,
       ),
     );
   }

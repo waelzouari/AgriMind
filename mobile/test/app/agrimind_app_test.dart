@@ -3,8 +3,8 @@ import 'dart:async';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/domain/auth_session.dart';
 import 'package:agrimind/features/auth/domain/authentication_failure.dart';
-import 'package:agrimind/features/auth/presentation/authenticated_home_page.dart';
 import 'package:agrimind/features/auth/presentation/sign_in_page.dart';
+import 'package:agrimind/features/dashboard/presentation/realtime_dashboard_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -61,7 +61,7 @@ void main() {
     await tester.pumpWidget(authTestApp(AuthenticationController(repository)));
     await tester.pumpAndSettle();
 
-    expect(find.byType(AuthenticatedHomePage), findsOneWidget);
+    expect(find.byType(RealtimeDashboardPage), findsOneWidget);
     expect(find.byType(SignInPage), findsNothing);
     await repository.close();
   });
@@ -105,14 +105,14 @@ void main() {
     await tester.pumpWidget(authTestApp(controller));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Se déconnecter'));
+    await tester.tap(find.byTooltip('Se déconnecter'));
     await tester.pumpAndSettle();
     expect(find.byType(SignInPage), findsOneWidget);
 
     Navigator.of(tester.element(find.byType(SignInPage))).pushNamed('/home');
     await tester.pumpAndSettle();
     expect(find.byType(SignInPage), findsWidgets);
-    expect(find.byType(AuthenticatedHomePage), findsNothing);
+    expect(find.byType(RealtimeDashboardPage), findsNothing);
     await repository.close();
   });
 }

@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/domain/auth_session.dart';
-import 'package:agrimind/features/auth/presentation/authenticated_home_page.dart';
+import 'package:agrimind/features/dashboard/presentation/realtime_dashboard_page.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
 import 'package:agrimind/features/onboarding/domain/farm_failure.dart';
 import 'package:agrimind/features/onboarding/presentation/farm_onboarding_page.dart';
@@ -65,7 +65,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(farmRepository.creationCalls, 1);
     expect(farmRepository.submittedName, 'Ferme Sud');
-    expect(find.byType(AuthenticatedHomePage), findsOneWidget);
+    expect(find.byType(RealtimeDashboardPage), findsOneWidget);
     expect(find.text('Ferme Sud'), findsOneWidget);
     await authRepository.close();
   });

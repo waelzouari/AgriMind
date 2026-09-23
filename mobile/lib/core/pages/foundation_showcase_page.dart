@@ -31,6 +31,23 @@ class FoundationShowcasePage extends StatelessWidget {
           ),
           const SizedBox(height: AgriMindSpacing.xxl),
           const AgriMindSectionHeader(
+            title: 'Carte métrique',
+            subtitle:
+                'Exemple visuel uniquement, sans donnée agricole en production.',
+          ),
+          const SizedBox(height: AgriMindSpacing.md),
+          const AgriMindMetricCard(
+            icon: Icons.water_drop_outlined,
+            label: 'Mesure exemple',
+            value: '64',
+            unit: '%',
+            status: AgriMindStatusBadge(
+              status: UiStatus.success,
+              labelOverride: 'Valeur de test',
+            ),
+          ),
+          const SizedBox(height: AgriMindSpacing.xxl),
+          const AgriMindSectionHeader(
             title: 'États de présentation',
             subtitle: 'Chaque état associe un texte, une icône et une couleur.',
           ),

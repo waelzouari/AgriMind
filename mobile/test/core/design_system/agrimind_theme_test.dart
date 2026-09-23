@@ -9,7 +9,7 @@ void main() {
     expect(theme.useMaterial3, isTrue);
     expect(theme.brightness, Brightness.light);
     expect(theme.colorScheme.primary, AgriMindColors.primaryGreen);
-    expect(theme.colorScheme.secondary, AgriMindColors.earthBrown);
+    expect(theme.colorScheme.secondary, AgriMindColors.sandAccent);
     expect(theme.scaffoldBackgroundColor, AgriMindColors.background);
     expect(
       theme.textTheme.bodyLarge?.fontSize,
@@ -38,6 +38,10 @@ void main() {
     );
     expect(
       _contrastRatio(AgriMindColors.offline, AgriMindColors.offlineContainer),
+      greaterThanOrEqualTo(4.5),
+    );
+    expect(
+      _contrastRatio(AgriMindColors.info, AgriMindColors.infoContainer),
       greaterThanOrEqualTo(4.5),
     );
   });

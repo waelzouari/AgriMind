@@ -42,35 +42,44 @@ class _FarmOnboardingPageState extends State<FarmOnboardingPage> {
   Widget build(BuildContext context) {
     final creating = widget.controller.status == FarmStatus.creating;
     return AgriMindScaffold(
-      title: 'AGRIMIND',
       scrollable: true,
       body: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Configurez votre ferme', style: AgriMindTypography.heading2),
+            const SizedBox(height: AgriMindSpacing.lg),
+            const Center(child: AgriMindLogo(compact: true)),
+            const SizedBox(height: AgriMindSpacing.xl),
+            Text(
+              'Configurez votre ferme',
+              style: AgriMindTypography.heading2,
+              textAlign: TextAlign.center,
+            ),
             const SizedBox(height: AgriMindSpacing.sm),
             Text(
-              'Un nom suffit pour commencer. Les réglages agricoles seront '
-              'ajoutés dans leurs fonctionnalités dédiées.',
-              style: AgriMindTypography.bodySecondary,
+              'Créons votre ferme pour commencer avec AgriMind. '
+              'Un nom suffit pour cette première configuration.',
+              style: AgriMindTypography.bodySecondary.copyWith(
+                color: AgriMindColors.textSecondary,
+              ),
+              textAlign: TextAlign.center,
             ),
+            const SizedBox(height: AgriMindSpacing.xl),
+            const _FarmVisual(),
             const SizedBox(height: AgriMindSpacing.xl),
             AgriMindCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextFormField(
-                    key: const Key('farm-name'),
+                  AgriMindTextField(
+                    fieldKey: const Key('farm-name'),
                     controller: _nameController,
                     enabled: !creating,
+                    label: 'Nom de la ferme',
+                    leadingIcon: Icons.agriculture_outlined,
                     maxLength: 120,
                     textInputAction: TextInputAction.done,
-                    decoration: const InputDecoration(
-                      labelText: 'Nom de la ferme',
-                      prefixIcon: Icon(Icons.agriculture_outlined),
-                    ),
                     validator: (value) =>
                         widget.controller.validateFarmName(value ?? ''),
                     onFieldSubmitted: (_) => _submit(),
@@ -80,11 +89,45 @@ class _FarmOnboardingPageState extends State<FarmOnboardingPage> {
                     label: 'Créer ma ferme',
                     onPressed: _submit,
                     loading: creating,
+                    icon: Icons.arrow_forward_rounded,
                   ),
                 ],
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FarmVisual extends StatelessWidget {
+  const _FarmVisual();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: 'Illustration décorative de ferme',
+      image: true,
+      child: Container(
+        height: 112,
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AgriMindColors.primaryContainer, AgriMindColors.sandBeige],
+          ),
+          borderRadius: BorderRadius.circular(AgriMindRadius.card),
+          border: Border.all(color: AgriMindColors.outline),
+        ),
+        child: const ExcludeSemantics(
+          child: Center(
+            child: Icon(
+              Icons.landscape_rounded,
+              size: 64,
+              color: AgriMindColors.primaryGreen,
+            ),
+          ),
         ),
       ),
     );

@@ -53,3 +53,23 @@ The cloud adapter refuses to start when TLS is disabled or no CA path is
 present, even though `tls=false` remains available to separately scoped local
 test/demo adapters. Reconnect settings configure bounded exponential backoff;
 they are not application retry loops.
+
+## Trusted ingestion server
+
+AGM-012 has a separate server-only configuration surface under
+`backend/services/ingestion/.env.example`:
+
+| Variable | Classification |
+|---|---|
+| `AGRIMIND_INGESTION_MQTT_HOST`, `..._PORT` | server configuration |
+| `AGRIMIND_INGESTION_MQTT_CLIENT_ID` | stable non-secret session identity |
+| `AGRIMIND_INGESTION_MQTT_CA_FILE` | trusted CA path |
+| `AGRIMIND_INGESTION_MQTT_USERNAME`, `..._PASSWORD` | server-only broker secret |
+| `AGRIMIND_INGESTION_SUPABASE_URL` | server configuration |
+| `AGRIMIND_INGESTION_SUPABASE_SERVICE_ROLE_KEY` | privileged server-only secret |
+| `AGRIMIND_INGESTION_MAXIMUM_AGE_SECONDS` | defaults to 86400 (24 hours) |
+| `AGRIMIND_INGESTION_MAXIMUM_FUTURE_SKEW_SECONDS` | defaults to 300 (5 minutes) |
+
+These values belong in the ingestion deployment secret store or an ignored
+server-local environment file. The service-role variable must never be copied
+to the repository-root edge/mobile environment, Flutter, or Raspberry Pi.

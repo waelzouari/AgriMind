@@ -13,3 +13,6 @@ the suite needs no Supabase project or credentials.
 Run `make db-test`. The harness creates and removes two uniquely named databases
 to prove clean reset/reproduction. It applies AGM-010, runs the AGM-010 tests,
 then applies AGM-011 and runs the authorization/isolation tests.
+It finally applies AGM-012 and verifies restricted RPC privileges, registered
+active-device enforcement, farm authority, duplicate/conflict behavior, status
+ingestion, and preservation of authenticated-client write denial.

@@ -78,3 +78,21 @@ private bucket through a versioned migration, use farm-scoped object paths such
 as `{farm_id}/inspections/{asset_id}`, and test the same cross-farm isolation
 before exposing uploads or signed reads. No public bucket is currently part of
 the architecture.
+
+## Trusted device ingestion
+
+AGM-012 keeps client RLS unchanged. A separately deployed server worker is the
+only holder of the Supabase `service_role` and can call restricted telemetry and
+device-status RPCs. Each RPC locks the registry row, requires an active device,
+derives the authoritative farm from `devices.farm_id`, and rejects a different
+farm asserted by the MQTT topic or payload.
+
+Source-generated `message_id` primary keys provide durable idempotency. Exact
+redelivery is a successful no-op whose original `ingested_at` is retained;
+changed content under the same ID is rejected. `last_seen_at` advances using
+server time only when a new event is inserted, not for a duplicate or conflict.
+
+Device MQTT credentials stay in broker/edge secret stores and are not database
+columns. Deactivation preserves history while making both telemetry and status
+ingestion reject the device. ACK and irrigation-result ingestion remain outside
+AGM-012.

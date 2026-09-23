@@ -52,6 +52,9 @@ recovery receive the same attention as happy paths.
   roles across SELECT/INSERT/UPDATE/DELETE.
 - Private Storage bucket policies and signed URL expiry.
 - Ingestion replay and duplicate-event tests.
+- Trusted telemetry/status ingestion: topic/payload/registry identity checks,
+  inactive and unknown devices, timestamp windows, atomic duplicate/conflict
+  classification, manual MQTT acknowledgment, and transient persistence retry.
 
 ### Flutter
 

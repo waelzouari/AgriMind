@@ -1,5 +1,6 @@
 # Backend services
 
-Server-side ingestion and inference services may be added by later tickets.
-Privileged Supabase credentials are permitted only in secured server runtime
-configuration, never in mobile or Raspberry Pi code.
+`ingestion/` contains the independently deployed AGM-012 MQTT-to-Supabase
+worker and trusted registry CLI. Privileged Supabase credentials are permitted
+only in secured server runtime configuration, never in mobile or Raspberry Pi
+code. Future inference services remain separate deployments.

@@ -3,6 +3,7 @@
 Status: AGM-003 defines contracts; AGM-006/007 implement cloud lifecycle,
 telemetry, commands, and ACKs; AGM-008 durably buffers telemetry and ACKs.
 AGM-009 adds single-active local Mosquitto fallback without changing v1 topics.
+AGM-012 consumes telemetry and status through a trusted server-side worker.
 
 ## AGM-006 connection lifecycle
 
@@ -73,7 +74,9 @@ agrimind/v1/farms/{farm_id}/devices/{device_id}/events/irrigation_result
 ```
 
 Topic farm/device IDs must equal the corresponding payload fields. That
-cross-check belongs to future MQTT handlers, not the message model alone.
+cross-check is enforced by AGM-007 for commands and by AGM-012 for telemetry
+and status. AGM-012 additionally derives the authoritative farm from the
+registered device instead of trusting either incoming copy.
 
 | Topic suffix | Direction | Purpose | QoS/retained |
 |---|---|---|---|
@@ -132,6 +135,13 @@ AGM-006 maps `SensorSnapshot` without changing that internal model:
 Each mapped measurement is published to `TopicBuilder.telemetry(...)` with QoS
 1 and `retain=false`. SQLite marks a publication delivered only after PUBACK.
 A crash between PUBACK and that update can produce an at-least-once duplicate.
+
+The AGM-012 subscriber rejects retained telemetry, validates the existing v1
+schema, cross-checks topic/payload/registry identity, and accepts data only from
+an active registered device. Readings older than 24 hours or more than five
+minutes in the future are rejected by default; both operational limits are
+configurable. Database `message_id` uniqueness turns exact QoS 1 redelivery
+into a successful no-op and rejects changed content under the same ID.
 
 ## Pump command
 
@@ -289,6 +299,14 @@ The cloud adapter is broker-neutral and requires MQTT 3.1.1 over verified TLS:
 
 The broker must support QoS 1, retained publications, LWT, TLS with a trusted
 certificate matching the configured hostname, and per-client ACLs.
+
+The ingestion worker uses a separate read-only broker principal, a stable
+client ID, persistent session semantics, QoS 1 wildcard subscriptions limited
+to telemetry and status, and manual message acknowledgment. Permanent invalid
+input is acknowledged to prevent a poison-message loop. A transient Supabase
+failure is not acknowledged and forces reconnect/redelivery. HiveMQ Cloud
+persistent-session retention and outage behavior have not been supervised end
+to end, so this is not a claim of guaranteed broker durability.
 
 ## Device ACL design
 

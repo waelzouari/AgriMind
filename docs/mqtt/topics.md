@@ -380,6 +380,46 @@ cross-device ACL rejection were not exercised during that run. Their current
 coverage remains the automated transport-boundary and ACL policy tests; they
 still require supervised deployment validation.
 
+## AGM-017 mobile telemetry subscription
+
+The authenticated Flutter app resolves its RLS-visible farm and exactly one
+active device before opening MQTT. Its dedicated MVP broker principal has only
+Subscribe permission on the exact provisioned filter:
+
+```text
+agrimind/v1/farms/{farm_id}/devices/{device_id}/telemetry/+
+```
+
+The client requests QoS 1, validates every v1 payload and topic identity, and
+resubscribes after automatic reconnect. It cannot publish and has no access to
+`status/device`, commands, command ACKs, sync ACKs, or irrigation events.
+Therefore broker connectivity is displayed as the **mobile MQTT session**, not
+as physical device presence. Telemetry timestamps independently drive live,
+waiting, and stale-data presentation.
+
+The HiveMQ Free/Serverless MVP uses a manually provisioned static mobile
+credential. This is a prototype limitation: a production multi-user system
+needs short-lived farm-scoped broker identities or a trusted token exchange.
+No broker password is stored in Git.
+
+### AGM-017 supervised Android smoke test
+
+On 2026-09-24, the Android application was validated manually against the real
+Supabase project and HiveMQ Cloud Serverless over verified TLS on port 8883.
+After authentication, it resolved `sfax farm` and its provisioned active device,
+connected with the dedicated Subscribe Only mobile principal, showed the
+waiting state without fabricated values, then received and rendered QoS 1 v1
+temperature (24.7 °C), humidity (62.5%), soil moisture (48.3%), and tank level
+(17.8 cm) telemetry as live data with the latest telemetry timestamp.
+
+This complements, but does not replace, the credential-free automated CI tests
+for contracts, filtering, duplicates, ordering, stale data, reconnect, cleanup,
+and rendering states. The supervised run did not involve a Raspberry Pi or
+GPIO, did not validate edge publication or pump safety, did not exercise
+disconnect/reconnect recovery, malformed or cross-identity input, and did not
+subscribe to or validate `status/device`. No credential or privileged key is
+recorded here.
+
 ### AGM-007 fake-pump command validation
 
 From the repository root, explicitly start the supervised command path:

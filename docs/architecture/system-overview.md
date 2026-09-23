@@ -196,6 +196,12 @@ not an irreversible database restriction or a Farm Manager.
   service-role key or shared device secret.
 - The independently deployed ingestion worker is the only application allowed
   to hold `service_role`; the key is forbidden on Flutter and Raspberry Pi.
+- AGM-017 resolves the authenticated user's RLS-visible farm and active device
+  before creating its telemetry repository. Widgets depend on a dashboard
+  controller, the controller depends on device/telemetry ports, and the MQTT
+  client remains an infrastructure adapter. The current HiveMQ Free credential
+  is static, subscribe-only, and single-device scoped; it is an explicit MVP
+  limitation to replace with short-lived scoped identity in production.
 
 AGM-013 separates broker acceptance from Cloud confirmation. Telemetry keeps
 its original `message_id` in SQLite and remains replayable after PUBACK until

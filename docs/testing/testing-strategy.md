@@ -61,6 +61,11 @@ recovery receive the same attention as happy paths.
 
 ### Flutter
 
+AGM-017 tests the telemetry topic builder and strict v1 decoder, wrong-identity
+filtering, all four metrics, duplicate/out-of-order suppression, stale data,
+connection/reconnection events, missing-data UI, and session disposal through
+fakes. Ordinary CI never connects to HiveMQ or requires physical hardware.
+
 - Unit: authentication session restoration, auth-state observation, safe
   provider-error mapping, repeated-submit suppression, one-farm lookup and
   creation recovery, repositories, validators, command construction, reconnect

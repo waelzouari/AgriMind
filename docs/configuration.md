@@ -8,12 +8,24 @@ invalid. It composes the unchanged `HardwareConfig` from AGM-002.
 
 ### Flutter client
 
-The mobile build receives `AGRIMIND_SUPABASE_URL` and
-`AGRIMIND_SUPABASE_ANON_KEY` through Flutter `--dart-define` values. Both are
-public client configuration; the latter may be the Supabase anonymous or newer
-publishable key. They must be paired with AGM-011 RLS. Flutter must never
-receive `service_role`, a database password, a JWT signing secret, or device
-credentials. Local `.env` files are not bundled or loaded by the mobile app.
+The mobile build receives its values through Flutter `--dart-define`. Local
+`.env` files are not bundled or loaded by the mobile app.
+
+| Variable | Rule |
+|---|---|
+| `AGRIMIND_SUPABASE_URL` | required HTTPS project URL |
+| `AGRIMIND_SUPABASE_ANON_KEY` | required anonymous/publishable client key; never privileged |
+| `AGRIMIND_MOBILE_MQTT_HOST` | required TLS broker hostname without URL scheme |
+| `AGRIMIND_MOBILE_MQTT_PORT` | exactly 8883 for the AGM-017 Cloud path |
+| `AGRIMIND_MOBILE_MQTT_USERNAME`, `..._PASSWORD` | dedicated subscribe-only MVP credential, supplied locally and never committed |
+| `AGRIMIND_MOBILE_TELEMETRY_STALE_SECONDS` | 5-3600; default 30 |
+
+The mobile broker credential is manually provisioned and scoped to the one MVP
+farm/device `telemetry/+` filter. It cannot publish. Static credentials embedded
+in an app are extractable, so production must use short-lived scoped broker
+identity or a trusted token exchange. Flutter must never receive `service_role`,
+a database password, a JWT signing secret, edge/ingestion credentials, or a
+broker principal with command/publish access.
 
 ### Edge device
 

@@ -6,6 +6,9 @@ void main() {
     const config = AppConfig(
       supabaseUrl: 'https://project-ref.supabase.co',
       supabaseAnonKey: 'public-client-key',
+      mqttHost: 'mqtt.example.com',
+      mqttUsername: 'mobile-read-only',
+      mqttPassword: 'test-password', // pragma: allowlist secret
     );
 
     expect(config.validate, returnsNormally);
@@ -13,22 +16,44 @@ void main() {
 
   test('rejects missing, insecure, and privileged configuration', () {
     const invalidConfigs = [
-      AppConfig(supabaseUrl: '', supabaseAnonKey: 'public-client-key'),
+      AppConfig(
+        supabaseUrl: '',
+        supabaseAnonKey: 'public-client-key',
+        mqttHost: 'mqtt.example.com',
+        mqttUsername: 'u',
+        mqttPassword: 'p', // pragma: allowlist secret
+      ),
       AppConfig(
         supabaseUrl: 'http://project-ref.supabase.co',
         supabaseAnonKey: 'public-client-key',
+        mqttHost: 'mqtt.example.com',
+        mqttUsername: 'u',
+        mqttPassword: 'p', // pragma: allowlist secret
       ),
       AppConfig(
         supabaseUrl: 'https://project-ref.supabase.co',
         supabaseAnonKey: '',
+        mqttHost: 'mqtt.example.com',
+        mqttUsername: 'u',
+        mqttPassword: 'p', // pragma: allowlist secret
       ),
       AppConfig(
         supabaseUrl: 'https://project-ref.supabase.co',
         supabaseAnonKey: 'service_role-placeholder',
+        mqttHost: 'mqtt.example.com',
+        mqttUsername: 'u',
+        mqttPassword: 'p', // pragma: allowlist secret
       ),
       AppConfig(
         supabaseUrl: 'https://project-ref.supabase.co',
         supabaseAnonKey: 'sb_secret_placeholder',
+        mqttHost: 'mqtt.example.com',
+        mqttUsername: 'u',
+        mqttPassword: 'p', // pragma: allowlist secret
+      ),
+      AppConfig(
+        supabaseUrl: 'https://project-ref.supabase.co',
+        supabaseAnonKey: 'public-client-key',
       ),
     ];
 

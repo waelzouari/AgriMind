@@ -1,7 +1,7 @@
 import 'package:agrimind/core/design_system/design_system.dart';
 import 'package:agrimind/core/widgets/widgets.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
-import 'package:agrimind/features/auth/presentation/authenticated_home_page.dart';
+import 'package:agrimind/features/dashboard/presentation/dashboard_session.dart';
 import 'package:agrimind/features/onboarding/application/farm_controller.dart';
 import 'package:agrimind/features/onboarding/presentation/farm_onboarding_page.dart';
 import 'package:flutter/material.dart';
@@ -10,11 +10,13 @@ class FarmGate extends StatelessWidget {
   const FarmGate({
     required this.authentication,
     required this.farmController,
+    required this.dashboardControllerFactory,
     super.key,
   });
 
   final AuthenticationController authentication;
   final FarmController farmController;
+  final DashboardControllerFactory dashboardControllerFactory;
 
   @override
   Widget build(BuildContext context) {
@@ -35,9 +37,10 @@ class FarmGate extends StatelessWidget {
         ),
         FarmStatus.noFarm ||
         FarmStatus.creating => FarmOnboardingPage(controller: farmController),
-        FarmStatus.configured => AuthenticatedHomePage(
-          controller: authentication,
+        FarmStatus.configured => DashboardSession(
+          authentication: authentication,
           farm: farmController.farm!,
+          controllerFactory: dashboardControllerFactory,
         ),
         FarmStatus.failure => AgriMindScaffold(
           body: Center(

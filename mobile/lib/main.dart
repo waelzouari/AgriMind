@@ -4,6 +4,10 @@ import 'package:agrimind/core/design_system/agrimind_theme.dart';
 import 'package:agrimind/core/widgets/widgets.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/infrastructure/supabase_authentication_repository.dart';
+import 'package:agrimind/features/dashboard/application/dashboard_controller.dart';
+import 'package:agrimind/features/dashboard/infrastructure/mqtt_telemetry_repository.dart';
+import 'package:agrimind/features/dashboard/infrastructure/mqtt_wire_client.dart';
+import 'package:agrimind/features/dashboard/infrastructure/supabase_device_repository.dart';
 import 'package:agrimind/features/onboarding/application/farm_controller.dart';
 import 'package:agrimind/features/onboarding/infrastructure/supabase_farm_repository.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +29,18 @@ Future<void> main() async {
         config: config,
         authentication: AuthenticationController(repository),
         farmController: FarmController(SupabaseFarmRepository(client)),
+        dashboardControllerFactory: () => DashboardController(
+          deviceRepository: SupabaseDeviceRepository(client),
+          telemetryRepository: MqttTelemetryRepository(
+            PahoStyleMqttWireClient(
+              host: config.mqttHost,
+              port: config.mqttPort,
+              username: config.mqttUsername,
+              password: config.mqttPassword,
+            ),
+          ),
+          staleAfter: Duration(seconds: config.telemetryStaleSeconds),
+        ),
       ),
     );
   } on Object {

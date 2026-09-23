@@ -67,12 +67,12 @@ creation are one transaction. Device status/LWT, inbound commands,
 `SensorSnapshot`, and future irrigation results are deliberately excluded.
 
 Pending rows are replayed deterministically by contract occurrence time and
-event ID. A row becomes delivered only after the broker-neutral publish receipt
-confirms the QoS 1 PUBACK. Replay is at-least-once: a crash after PUBACK but
-before the SQLite delivery update can publish a duplicate, so consumers must
-deduplicate by `message_id` or `acknowledgement_id`.
+event ID. A QoS 1 PUBACK moves telemetry only to `broker_accepted`; it does not
+prove Cloud persistence. AGM-013 keeps that telemetry replayable until a
+validated application receipt moves it to `cloud_confirmed` or `rejected`.
+Replay is at-least-once, so consumers deduplicate by stable identity.
 
-Both pending and delivered events are removed when their contract timestamp is
+All pending and terminal events are removed when their contract timestamp is
 24 hours old. Cleanup uses an injected UTC clock and logs counts only. If
 SQLite is unavailable, connected MQTT receives one best-effort direct publish
 with an explicit loss-of-durability log; if MQTT is unavailable too, the loss

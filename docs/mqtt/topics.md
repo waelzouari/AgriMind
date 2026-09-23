@@ -133,8 +133,9 @@ AGM-006 maps `SensorSnapshot` without changing that internal model:
   agronomic feature.
 
 Each mapped measurement is published to `TopicBuilder.telemetry(...)` with QoS
-1 and `retain=false`. SQLite marks a publication delivered only after PUBACK.
-A crash between PUBACK and that update can produce an at-least-once duplicate.
+1 and `retain=false`. SQLite records `broker_accepted` after PUBACK and records
+`cloud_confirmed` only after a validated AGM-013 application receipt. A crash
+at either boundary can produce an at-least-once duplicate.
 
 The AGM-012 subscriber rejects retained telemetry, validates the existing v1
 schema, cross-checks topic/payload/registry identity, and accepts data only from
@@ -142,6 +143,32 @@ an active registered device. Readings older than 24 hours or more than five
 minutes in the future are rejected by default; both operational limits are
 configurable. Database `message_id` uniqueness turns exact QoS 1 redelivery
 into a successful no-op and rejects changed content under the same ID.
+
+## Telemetry ingestion acknowledgement
+
+Schema: `contracts/v1/ingestion-acknowledgement.schema.json`.
+
+```text
+agrimind/v1/farms/{farm_id}/devices/{device_id}/sync/acks/{message_id}
+```
+
+The trusted worker publishes this with QoS 1 and `retain=false` after
+`inserted`, exact `duplicate`, or a safely correlatable permanent rejection.
+Statuses are `persisted`, `duplicate`, and `rejected`; only `rejected` includes
+a stable `reason_code`. Transient failures and uncorrelatable input produce no
+terminal receipt. Payloads contain no telemetry, exception, SQL text, or
+credential.
+
+The worker may publish `agrimind/v1/farms/+/devices/+/sync/acks/+`. A device
+may subscribe only to `.../sync/acks/+` under its exact farm/device base and
+may not publish receipts, subscribe cross-device/cross-farm, or use a broader
+wildcard. The edge still verifies topic and payload identity.
+
+`rejected` is terminal and is not replayed. All states are purged when the
+original observation reaches 24 hours. Near that boundary, clock alignment
+and latency can cause local expiry or Cloud stale rejection. Status remains a
+direct retained current-state message and is excluded. There is no total order
+across telemetry topics and no exactly-once or zero-data-loss claim.
 
 ## Pump command
 

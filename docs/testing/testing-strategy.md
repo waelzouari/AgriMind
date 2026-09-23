@@ -55,6 +55,9 @@ recovery receive the same attention as happy paths.
 - Trusted telemetry/status ingestion: topic/payload/registry identity checks,
   inactive and unknown devices, timestamp windows, atomic duplicate/conflict
   classification, manual MQTT acknowledgment, and transient persistence retry.
+- Offline-to-Cloud synchronization: broker acceptance versus Cloud
+  confirmation, stable message identity, receipt validation, permanent
+  rejection, restart/redelivery convergence, and the 24-hour boundary.
 
 ### Flutter
 

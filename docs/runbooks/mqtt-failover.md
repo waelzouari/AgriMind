@@ -31,3 +31,17 @@ Only one broker owns the pump-command subscription at a time.
 Never run this procedure with the physical pump unless a separately supervised
 hardware test has secured the water path. Logs and evidence must not include
 credentials or payloads.
+## Supervised AGM-013 recovery validation
+
+Use `agrimind-offline-sync-validate --env-file .env` only with protected
+runtime credentials and a disposable SQLite path. Observe the initial local
+pending count and stable message IDs, interrupt Internet access, capture
+telemetry, then restore connectivity. Confirm the original payloads replay,
+AGM-012 logs `inserted` or `duplicate`, matching rows exist once in Supabase,
+and the edge receives matching receipt topics. A repeated publication must
+produce no second logical row and may return `duplicate`.
+
+Record timestamps, outbox states, reconnect evidence, ingestion outcomes, and
+final database rows. Never record credentials or raw environment files. This
+demonstrates only the supervised scenario; it is not evidence of zero data
+loss or exactly-once delivery. Keep the pump disconnected or use fake hardware.

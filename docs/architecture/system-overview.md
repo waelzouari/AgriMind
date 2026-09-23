@@ -176,6 +176,13 @@ committed unless licensing and size policy permit it.
   service-role key or shared device secret.
 - The independently deployed ingestion worker is the only application allowed
   to hold `service_role`; the key is forbidden on Flutter and Raspberry Pi.
+
+AGM-013 separates broker acceptance from Cloud confirmation. Telemetry keeps
+its original `message_id` in SQLite and remains replayable after PUBACK until
+AGM-012 reports `persisted`, exact `duplicate`, or a permanent `rejected`
+result on the device's receipt namespace. Status remains retained/direct and
+is not part of durable telemetry replay. This is at-least-once synchronization,
+not exactly-once delivery.
 - MQTT authenticates per-device principals and exact broker ACLs limit their
   publish topics. Ingestion still treats topic/payload farm IDs as assertions
   and derives authority from `devices.farm_id`.

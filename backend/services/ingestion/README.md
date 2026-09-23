@@ -61,6 +61,17 @@ is acknowledged and discarded. A temporary persistence failure is not
 acknowledged; the client disconnects so the broker can redeliver. Exact
 redelivery is a successful no-op through database `message_id` idempotency.
 
+For telemetry, a terminal result also publishes a QoS 1, non-retained receipt
+on `agrimind/v1/farms/{farm_id}/devices/{device_id}/sync/acks/{message_id}`.
+`inserted` maps to `persisted`, an exact redelivery to `duplicate`, and a safely
+correlatable permanent failure to `rejected`. The inbound message is broker-
+acknowledged after the receipt PUBACK. Transient failures and uncorrelatable
+invalid input publish no receipt. This remains an at-least-once design.
+
+The trusted MQTT principal may publish the receipt wildcard. Each device may
+subscribe only below its own exact farm/device receipt namespace and may never
+publish a receipt.
+
 Telemetry older than 24 hours or more than five minutes in the future is
 rejected by default. Both limits are configurable operational validity rules,
 not agronomic thresholds. Retained telemetry is rejected; retained device

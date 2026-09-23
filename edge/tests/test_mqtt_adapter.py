@@ -54,7 +54,7 @@ class FakePahoClient:
 
     def publish(self, topic: str, payload: str, *, qos: int, retain: bool) -> object:
         self.operations.append(("publish", topic, payload, qos, retain))
-        return SimpleNamespace(rc=self.publish_rc)
+        return FakePahoMessageInfo(self.publish_rc)
 
     def subscribe(self, topic: str, *, qos: int) -> tuple[int, int]:
         self.operations.append(("subscribe", topic, qos))
@@ -65,6 +65,19 @@ class FakePahoClient:
 
     def loop_stop(self) -> None:
         self.operations.append(("loop_stop",))
+
+
+class FakePahoMessageInfo:
+    def __init__(self, rc: int) -> None:
+        self.rc = rc
+        self.confirmed = True
+        self.timeouts: list[float] = []
+
+    def wait_for_publish(self, *, timeout: float) -> None:
+        self.timeouts.append(timeout)
+
+    def is_published(self) -> bool:
+        return self.confirmed
 
 
 def config(
@@ -152,10 +165,11 @@ def test_adapter_forwards_connection_recovery_and_publication() -> None:
     client.on_connect(None, None, None, SimpleNamespace(is_failure=False), None)
     client.on_disconnect(None, None, None, None, None)
     client.on_connect(None, None, None, SimpleNamespace(is_failure=False), None)
-    transport.publish(MqttPublication("exact/telemetry", "{}", 1, False))
+    receipt = transport.publish(MqttPublication("exact/telemetry", "{}", 1, False))
 
     assert events == ["connected", "disconnected", "connected"]
     assert ("publish", "exact/telemetry", "{}", 1, False) in client.operations
+    assert receipt.wait_for_confirmation(2.0) is True
 
 
 def test_rejected_connection_reports_disconnected_state() -> None:

@@ -13,6 +13,7 @@ from agrimind_edge.application.mqtt_ports import (
     ConnectionHandler,
     DisconnectionHandler,
     MessageHandler,
+    MqttPublishReceipt,
 )
 from agrimind_edge.config.runtime import MqttConfig, MqttCredentials
 from agrimind_edge.domain.mqtt import MqttPublication, ReceivedMqttMessage
@@ -89,7 +90,7 @@ class PahoMqttTransport:
         if result != mqtt.MQTT_ERR_SUCCESS:
             raise RuntimeError("MQTT network loop failed to start")
 
-    def publish(self, publication: MqttPublication) -> None:
+    def publish(self, publication: MqttPublication) -> MqttPublishReceipt:
         result = self._client.publish(
             publication.topic,
             publication.payload,
@@ -98,6 +99,7 @@ class PahoMqttTransport:
         )
         if result.rc != mqtt.MQTT_ERR_SUCCESS:
             raise RuntimeError("MQTT publish was not accepted by the client")
+        return _PahoPublishReceipt(result)
 
     def subscribe(self, topic: str, qos: int, handler: MessageHandler) -> None:
         if not topic or "+" in topic or "#" in topic:
@@ -172,3 +174,17 @@ class PahoMqttTransport:
                 retain=message.retain,
             )
         )
+
+
+class _PahoPublishReceipt:
+    def __init__(self, message_info: Any) -> None:
+        self._message_info = message_info
+
+    def wait_for_confirmation(self, timeout_seconds: float) -> bool:
+        if timeout_seconds <= 0:
+            raise ValueError("MQTT confirmation timeout must be positive")
+        try:
+            self._message_info.wait_for_publish(timeout=timeout_seconds)
+            return bool(self._message_info.is_published())
+        except (RuntimeError, ValueError):
+            return False

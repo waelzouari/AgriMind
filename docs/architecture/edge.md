@@ -56,9 +56,32 @@ the four approved snapshot measurements into AGM-003 wire contracts, and
 adapter owns TLS, credentials, LWT, the asynchronous network loop, and bounded
 reconnect configuration; tests replace it with `FakeMqttTransport`.
 
-MQTT code has no `PumpPort`, controller, GPIO import, or command subscription.
-Connection loss therefore cannot actuate the pump or weaken AGM-005. Telemetry
-is not persistently buffered in this ticket; SQLite outbox work remains later.
+Connection loss cannot actuate the pump or weaken AGM-005. AGM-008 adds a
+durable boundary without adding GPIO knowledge to MQTT code.
+
+## Local event store and outbox (AGM-008)
+
+SQLite stores only canonical `Telemetry` and `CommandAcknowledgement` events,
+with their exact MQTT publication metadata. Event insertion and pending-outbox
+creation are one transaction. Device status/LWT, inbound commands,
+`SensorSnapshot`, and future irrigation results are deliberately excluded.
+
+Pending rows are replayed deterministically by contract occurrence time and
+event ID. A row becomes delivered only after the broker-neutral publish receipt
+confirms the QoS 1 PUBACK. Replay is at-least-once: a crash after PUBACK but
+before the SQLite delivery update can publish a duplicate, so consumers must
+deduplicate by `message_id` or `acknowledgement_id`.
+
+Both pending and delivered events are removed when their contract timestamp is
+24 hours old. Cleanup uses an injected UTC clock and logs counts only. If
+SQLite is unavailable, connected MQTT receives one best-effort direct publish
+with an explicit loss-of-durability log; if MQTT is unavailable too, the loss
+is logged without payload data and local sensor/pump safety continues.
+
+The same database holds a narrow processed-command register. It stores the
+command fingerprint and latest ACK, never a replayable inbound command. An
+exact duplicate after restart replays the saved ACK without actuation; changed
+content under the same ID is rejected. Expired register rows are pruned.
 
 ## Safe pump command boundary (AGM-005)
 
@@ -103,12 +126,13 @@ Actuation or scheduler exceptions produce `failed`, while policy decisions
 produce `rejected`. Stable snake-case reason codes are used instead of raw
 exception text.
 
-QoS 1 duplicates are handled using an in-memory map keyed by `command_id`.
+QoS 1 duplicates are handled using an in-memory map keyed by `command_id`,
+backed by AGM-008's processed-command register when persistence is composed.
 Exact duplicates replay the stored acknowledgement without physical actuation;
 reuse of an ID with changed command content is rejected. Completed automatic
 stop outcomes replace the earlier accepted outcome for subsequent replay.
-This bounded MVP cache does not survive a process restart; durable idempotency
-will be supplied by the later SQLite event/outbox ticket.
+The register survives a process restart and is lookup-only at startup: stored
+commands are never executed or replayed into the pump.
 
 The v1 wire contract permits 1-600 seconds. The local
 `AGRIMIND_PUMP_MAX_DURATION_SECONDS` must also be 1-600 and defaults to 600 so

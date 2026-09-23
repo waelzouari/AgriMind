@@ -8,12 +8,14 @@ from datetime import UTC, datetime
 from uuid import UUID, uuid4
 
 from agrimind_edge.application.mqtt_ports import MqttTransport
+from agrimind_edge.application.persistence_ports import DurableEventPublisher
 from agrimind_edge.application.pump_command_handler import PumpCommandHandler
 from agrimind_edge.contracts import CommandAcknowledgement, PumpCommand
 from agrimind_edge.contracts.enums import AcknowledgementStatus
 from agrimind_edge.contracts.topics import TopicBuilder
 from agrimind_edge.contracts.validation import decode_json, parse_uuid
 from agrimind_edge.domain.mqtt import MqttPublication, ReceivedMqttMessage
+from agrimind_edge.domain.persistence import EdgeEvent
 from agrimind_edge.domain.pump import PumpDecisionCode
 
 MQTT_QOS_AT_LEAST_ONCE = 1
@@ -27,10 +29,12 @@ class MqttAcknowledgementPublisher:
         transport: MqttTransport,
         topics: TopicBuilder,
         *,
+        durable_publisher: DurableEventPublisher | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
         self._transport = transport
         self._topics = topics
+        self._durable_publisher = durable_publisher
         self._logger = logger or logging.getLogger(__name__)
 
     def publish(self, acknowledgement: CommandAcknowledgement) -> None:
@@ -41,7 +45,15 @@ class MqttAcknowledgementPublisher:
             retain=False,
         )
         try:
-            self._transport.publish(publication)
+            if self._durable_publisher is None:
+                self._transport.publish(publication)
+            else:
+                self._durable_publisher.submit(
+                    EdgeEvent.from_acknowledgement(acknowledgement),
+                    publication,
+                    attempt_now=True,
+                    replay_delivered=True,
+                )
         except Exception:
             self._logger.warning(
                 "mqtt_ack_publish_failed",

@@ -6,6 +6,7 @@ from agrimind_edge.application.mqtt_ports import (
     ConnectionHandler,
     DisconnectionHandler,
     MessageHandler,
+    MqttPublishReceipt,
 )
 from agrimind_edge.domain.mqtt import (
     DeviceRuntimeStatus,
@@ -21,10 +22,12 @@ class FakeMqttTransport:
         auto_connect: bool = True,
         connect_failure: Exception | None = None,
         fail_publish_at: set[int] | None = None,
+        unconfirmed_publish_at: set[int] | None = None,
     ) -> None:
         self.auto_connect = auto_connect
         self.connect_failure = connect_failure
         self.fail_publish_at = fail_publish_at or set()
+        self.unconfirmed_publish_at = unconfirmed_publish_at or set()
         self.operations: list[str] = []
         self.publications: list[MqttPublication] = []
         self.last_will: MqttPublication | None = None
@@ -56,7 +59,7 @@ class FakeMqttTransport:
             self._connected = True
             self._on_connected()
 
-    def publish(self, publication: MqttPublication) -> None:
+    def publish(self, publication: MqttPublication) -> MqttPublishReceipt:
         if not self._connected:
             raise RuntimeError("fake MQTT transport is disconnected")
         self._publish_attempts += 1
@@ -64,6 +67,9 @@ class FakeMqttTransport:
         if self._publish_attempts in self.fail_publish_at:
             raise RuntimeError("scripted MQTT publish failure")
         self.publications.append(publication)
+        return FakeMqttPublishReceipt(
+            confirmed=self._publish_attempts not in self.unconfirmed_publish_at
+        )
 
     def subscribe(self, topic: str, qos: int, handler: MessageHandler) -> None:
         if not self._connected:
@@ -106,3 +112,15 @@ class FakeDeviceStatusSource:
     def read_status(self) -> DeviceRuntimeStatus:
         self.read_count += 1
         return self.status
+
+
+class FakeMqttPublishReceipt:
+    def __init__(self, *, confirmed: bool) -> None:
+        self.confirmed = confirmed
+        self.wait_count = 0
+
+    def wait_for_confirmation(self, timeout_seconds: float) -> bool:
+        if timeout_seconds <= 0:
+            raise ValueError("MQTT confirmation timeout must be positive")
+        self.wait_count += 1
+        return self.confirmed

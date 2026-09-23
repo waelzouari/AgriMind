@@ -30,6 +30,9 @@ recovery receive the same attention as happy paths.
   exact-identity ACL policy, credential redaction, and no pump/GPIO dependency
   using deterministic fakes rather than Internet access.
 - Contract: JSON Schema examples and compatibility for MQTT envelopes.
+- Persistence: idempotent migrations, atomic event/outbox insertion, ordered
+  restart recovery, PUBACK-gated delivery, 24-hour retention, failure fallback,
+  and command idempotence across restart using temporary SQLite and fake MQTT.
 - Integration: fake hardware plus local Mosquitto; duplicate QoS 1 delivery;
   retained-command protection; disconnect/reconnect; SQLite restart recovery;
   ingestion acknowledgement.

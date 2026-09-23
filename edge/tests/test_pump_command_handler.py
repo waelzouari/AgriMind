@@ -4,11 +4,13 @@ import logging
 from dataclasses import replace
 from datetime import UTC, datetime, timedelta
 from itertools import count
+from pathlib import Path
 from uuid import UUID
 
 import pytest
 
 from agrimind_edge.adapters.fake import FakePump, FakeScheduler
+from agrimind_edge.adapters.persistence import SqliteEventOutboxStore
 from agrimind_edge.application import PumpCommandHandler, SafePumpController
 from agrimind_edge.config import PumpSafetyConfig
 from agrimind_edge.contracts import CommandAcknowledgement, PumpCommand
@@ -158,6 +160,64 @@ def test_same_command_id_with_changed_content_is_rejected() -> None:
     assert conflict.status is AcknowledgementStatus.REJECTED
     assert conflict.reason_code == "command_id_conflict"
     assert harness.pump.calls.count("turn_on") == 1
+
+
+def test_duplicate_after_restart_replays_ack_without_actuation(tmp_path: Path) -> None:
+    path = tmp_path / "edge.sqlite3"
+    store = SqliteEventOutboxStore(path)
+    store.initialize()
+    pump = FakePump()
+    first = PumpCommandHandler(
+        SafePumpController(pump, FakeScheduler()),
+        PumpSafetyConfig(FARM_ID, DEVICE_ID, 120),
+        clock=lambda: NOW,
+        processed_command_store=store,
+    )
+    off_command = command(PumpAction.OFF)
+    original = first.handle(off_command)
+    store.close()
+
+    restarted_store = SqliteEventOutboxStore(path)
+    restarted_store.initialize()
+    restarted_pump = FakePump()
+    restarted = PumpCommandHandler(
+        SafePumpController(restarted_pump, FakeScheduler()),
+        PumpSafetyConfig(FARM_ID, DEVICE_ID, 120),
+        clock=lambda: NOW,
+        processed_command_store=restarted_store,
+    )
+
+    duplicate = restarted.handle(off_command)
+
+    assert duplicate == original
+    assert restarted_pump.calls == []
+
+
+def test_conflicting_command_after_restart_is_rejected(tmp_path: Path) -> None:
+    store = SqliteEventOutboxStore(tmp_path / "edge.sqlite3")
+    store.initialize()
+    original = command(PumpAction.ON, duration_seconds=30)
+    first_pump = FakePump()
+    first = PumpCommandHandler(
+        SafePumpController(first_pump, FakeScheduler()),
+        PumpSafetyConfig(FARM_ID, DEVICE_ID, 120),
+        clock=lambda: NOW,
+        processed_command_store=store,
+    )
+    first.handle(original)
+    restarted_pump = FakePump()
+    restarted = PumpCommandHandler(
+        SafePumpController(restarted_pump, FakeScheduler()),
+        PumpSafetyConfig(FARM_ID, DEVICE_ID, 120),
+        clock=lambda: NOW,
+        processed_command_store=store,
+    )
+
+    result = restarted.handle(replace(original, duration_seconds=31))
+
+    assert result.status is AcknowledgementStatus.REJECTED
+    assert result.reason_code == "command_id_conflict"
+    assert restarted_pump.calls == []
 
 
 def test_expired_and_future_commands_do_not_actuate() -> None:

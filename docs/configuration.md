@@ -20,6 +20,7 @@ invalid. It composes the unchanged `HardwareConfig` from AGM-002.
 | `AGRIMIND_MQTT_RECONNECT_MAX_SECONDS` | integer from reconnect minimum through 3600; default 60 |
 | `AGRIMIND_CONTRACT_VERSION` | exactly `v1` |
 | `AGRIMIND_PUMP_MAX_DURATION_SECONDS` | local limit 1-600; default 600; commands above it are rejected |
+| `AGRIMIND_SQLITE_PATH` | absolute local database path; default `/var/lib/agrimind/edge.sqlite3` |
 | `AGRIMIND_GPIO_*`, ADS1115/calibration/tank values | validated by `HardwareConfig` |
 
 ## Secrets

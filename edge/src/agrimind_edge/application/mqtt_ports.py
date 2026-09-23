@@ -16,6 +16,10 @@ DisconnectionHandler = Callable[[], None]
 MessageHandler = Callable[[ReceivedMqttMessage], None]
 
 
+class MqttPublishReceipt(Protocol):
+    def wait_for_confirmation(self, timeout_seconds: float) -> bool: ...
+
+
 class MqttTransport(Protocol):
     def set_connection_handlers(
         self,
@@ -27,7 +31,7 @@ class MqttTransport(Protocol):
 
     def connect(self) -> None: ...
 
-    def publish(self, publication: MqttPublication) -> None: ...
+    def publish(self, publication: MqttPublication) -> MqttPublishReceipt: ...
 
     def subscribe(self, topic: str, qos: int, handler: MessageHandler) -> None: ...
 

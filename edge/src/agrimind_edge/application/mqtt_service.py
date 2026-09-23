@@ -13,6 +13,7 @@ from agrimind_edge.application.mqtt_ports import (
     MessageHandler,
     MqttTransport,
 )
+from agrimind_edge.application.persistence_ports import DurableEventPublisher
 from agrimind_edge.application.telemetry import TelemetryMapper
 from agrimind_edge.contracts.enums import DeviceHealth
 from agrimind_edge.contracts.models import DeviceStatus
@@ -22,6 +23,7 @@ from agrimind_edge.domain.mqtt import (
     MqttPublication,
     TelemetryPublishResult,
 )
+from agrimind_edge.domain.persistence import EdgeEvent
 from agrimind_edge.domain.sensors import SensorSnapshot
 
 MQTT_QOS_AT_LEAST_ONCE = 1
@@ -38,6 +40,7 @@ class CloudMqttService:
         status_source: DeviceStatusSource,
         *,
         command_message_handler: MessageHandler | None = None,
+        durable_publisher: DurableEventPublisher | None = None,
         clock: Callable[[], datetime] | None = None,
         message_id_factory: Callable[[], UUID] | None = None,
         logger: logging.Logger | None = None,
@@ -47,6 +50,7 @@ class CloudMqttService:
         self._topics = topics
         self._status_source = status_source
         self._command_message_handler = command_message_handler
+        self._durable_publisher = durable_publisher
         self._clock = clock or (lambda: datetime.now(UTC))
         self._message_id_factory = message_id_factory or uuid4
         self._logger = logger or logging.getLogger(__name__)
@@ -63,6 +67,8 @@ class CloudMqttService:
         with self._lock:
             if self._state in {MqttConnectionState.CONNECTING, MqttConnectionState.CONNECTED}:
                 return
+            if self._durable_publisher is not None:
+                self._durable_publisher.initialize()
             self._transport.configure_last_will(
                 self._status_publication(online=False, session_lost=True)
             )
@@ -96,7 +102,8 @@ class CloudMqttService:
     def publish_snapshot(self, snapshot: SensorSnapshot) -> TelemetryPublishResult:
         mapping = self._mapper.map_snapshot(snapshot)
         with self._lock:
-            if self._state is not MqttConnectionState.CONNECTED:
+            connected = self._state is MqttConnectionState.CONNECTED
+            if not connected and self._durable_publisher is None:
                 self._logger.info(
                     "telemetry_skipped_offline",
                     extra={
@@ -121,7 +128,15 @@ class CloudMqttService:
                     retain=False,
                 )
                 try:
-                    self._transport.publish(publication)
+                    if self._durable_publisher is None:
+                        self._transport.publish(publication)
+                        was_published = True
+                    else:
+                        was_published = self._durable_publisher.submit(
+                            EdgeEvent.from_telemetry(telemetry),
+                            publication,
+                            attempt_now=connected,
+                        )
                 except Exception:
                     self._logger.warning(
                         "telemetry_publish_failed",
@@ -132,7 +147,7 @@ class CloudMqttService:
                         },
                     )
                     continue
-                published += 1
+                published += int(was_published)
             return TelemetryPublishResult(
                 mapped=len(mapping.telemetry),
                 published=published,
@@ -165,6 +180,8 @@ class CloudMqttService:
                             "topic": self._topics.pump_command(),
                         },
                     )
+            if self._durable_publisher is not None:
+                self._durable_publisher.request_drain()
             self._logger.info(
                 "mqtt_connected",
                 extra={"event": "mqtt_connected", "state": self._state.value},

@@ -6,6 +6,7 @@ from agrimind_edge.application.mqtt_commands import (
     MqttPumpCommandProcessor,
 )
 from agrimind_edge.application.mqtt_service import CloudMqttService
+from agrimind_edge.application.outbox_service import OutboxService
 from agrimind_edge.application.ports import (
     AirSensorPort,
     PumpPort,
@@ -23,6 +24,7 @@ __all__ = [
     "DeviceAclPolicy",
     "MqttAcknowledgementPublisher",
     "MqttPumpCommandProcessor",
+    "OutboxService",
     "PumpCommandHandler",
     "PumpPort",
     "SafePumpController",

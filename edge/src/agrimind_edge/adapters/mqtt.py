@@ -29,9 +29,10 @@ class PahoMqttTransport:
         *,
         client: Any | None = None,
         ssl_context_factory: Callable[..., ssl.SSLContext] = ssl.create_default_context,
+        require_verified_tls: bool = True,
         logger: logging.Logger | None = None,
     ) -> None:
-        if not config.tls_enabled or config.ca_file is None:
+        if require_verified_tls and (not config.tls_enabled or config.ca_file is None):
             raise ValueError("cloud MQTT transport requires verified TLS and a CA file")
         self._config = config
         self._logger = logger or logging.getLogger(__name__)
@@ -47,11 +48,14 @@ class PahoMqttTransport:
         self._message_handlers: dict[str, MessageHandler] = {}
 
         self._client.username_pw_set(credentials.username, credentials.password)
-        context = ssl_context_factory(cafile=str(config.ca_file))
-        context.minimum_version = ssl.TLSVersion.TLSv1_2
-        context.check_hostname = True
-        context.verify_mode = ssl.CERT_REQUIRED
-        self._client.tls_set_context(context)
+        if config.tls_enabled:
+            if config.ca_file is None:
+                raise ValueError("a CA file is required when MQTT TLS is enabled")
+            context = ssl_context_factory(cafile=str(config.ca_file))
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
+            context.check_hostname = True
+            context.verify_mode = ssl.CERT_REQUIRED
+            self._client.tls_set_context(context)
         self._client.reconnect_delay_set(
             min_delay=config.reconnect_min_seconds,
             max_delay=config.reconnect_max_seconds,

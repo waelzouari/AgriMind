@@ -88,3 +88,39 @@ def test_reconnect_minimum_cannot_exceed_maximum() -> None:
 
     with pytest.raises(ValueError, match="minimum <= maximum"):
         RuntimeConfig.from_environment(environment)
+
+
+def test_local_fallback_is_explicit_and_uses_separate_redacted_credentials() -> None:
+    environment = _environment()
+    environment.update(
+        {
+            "AGRIMIND_MQTT_FAILOVER_ENABLED": "true",
+            "AGRIMIND_LOCAL_MQTT_HOST": "127.0.0.1",
+            "AGRIMIND_LOCAL_MQTT_PORT": "1883",
+            "AGRIMIND_LOCAL_MQTT_USERNAME": "local-device",
+            "AGRIMIND_LOCAL_MQTT_PASSWORD": "test-local-pass",  # pragma: allowlist secret
+        }
+    )
+    config = RuntimeConfig.from_environment(environment)
+
+    assert config.failover.enabled is True
+    assert config.local_mqtt is not None
+    assert config.local_mqtt.tls_enabled is False
+    assert config.local_credentials is not None
+    assert "test-local-pass" not in repr(config)
+
+
+def test_enabled_local_tls_requires_ca_file() -> None:
+    environment = _environment()
+    environment.update(
+        {
+            "AGRIMIND_MQTT_FAILOVER_ENABLED": "true",
+            "AGRIMIND_LOCAL_MQTT_HOST": "127.0.0.1",
+            "AGRIMIND_LOCAL_MQTT_USERNAME": "local-device",
+            "AGRIMIND_LOCAL_MQTT_PASSWORD": "test-local-pass",  # pragma: allowlist secret
+            "AGRIMIND_LOCAL_MQTT_TLS_ENABLED": "true",
+        }
+    )
+
+    with pytest.raises(ValueError, match="CA file is required"):
+        RuntimeConfig.from_environment(environment)

@@ -198,6 +198,21 @@ def test_adapter_rejects_unverified_cloud_configuration() -> None:
         PahoMqttTransport(config(tls_enabled=False, ca_file=None), credentials)
 
 
+def test_explicit_local_adapter_allows_authenticated_transport_without_tls() -> None:
+    client = FakePahoClient()
+    PahoMqttTransport(
+        config(tls_enabled=False, ca_file=None),
+        MqttCredentials(
+            "local-device",
+            "local-placeholder-password",  # pragma: allowlist secret
+        ),
+        client=client,
+        require_verified_tls=False,
+    )
+
+    assert [operation[0] for operation in client.operations] == ["credentials", "reconnect"]
+
+
 def test_adapter_reports_client_publish_failure() -> None:
     client = FakePahoClient()
     client.publish_rc = mqtt.MQTT_ERR_NO_CONN

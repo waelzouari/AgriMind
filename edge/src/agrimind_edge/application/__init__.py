@@ -5,6 +5,7 @@ from agrimind_edge.application.mqtt_commands import (
     MqttAcknowledgementPublisher,
     MqttPumpCommandProcessor,
 )
+from agrimind_edge.application.mqtt_failover import FailoverEventPublisher, FailoverMqttTransport
 from agrimind_edge.application.mqtt_service import CloudMqttService
 from agrimind_edge.application.outbox_service import OutboxService
 from agrimind_edge.application.ports import (
@@ -22,6 +23,8 @@ __all__ = [
     "AirSensorPort",
     "CloudMqttService",
     "DeviceAclPolicy",
+    "FailoverEventPublisher",
+    "FailoverMqttTransport",
     "MqttAcknowledgementPublisher",
     "MqttPumpCommandProcessor",
     "OutboxService",

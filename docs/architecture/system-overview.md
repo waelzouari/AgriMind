@@ -172,6 +172,9 @@ committed unless licensing and size policy permit it.
   service-role key or shared device secret.
 - Edge secrets live in a root-readable environment file or secret manager, not
   Git. TLS verification is mandatory in cloud mode.
+- Broker selection is single-active: local Mosquitto can mirror pending Cloud
+  events, but its PUBACK never marks the Cloud outbox delivered. Both broker
+  paths share the same command handler and persistent idempotency register.
 - RLS is tested with two-user negative cases for every exposed table and Storage
   bucket.
 - Images use private buckets and signed access; inference input type, size, and

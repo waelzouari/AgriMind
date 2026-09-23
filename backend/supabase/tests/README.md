@@ -16,3 +16,9 @@ then applies AGM-011 and runs the authorization/isolation tests.
 It finally applies AGM-012 and verifies restricted RPC privileges, registered
 active-device enforcement, farm authority, duplicate/conflict behavior, status
 ingestion, and preservation of authenticated-client write denial.
+
+The harness then applies AGM-016 and verifies the restricted onboarding RPC,
+identity derivation, name normalization, atomic farm/owner creation, retry
+idempotence, cross-farm isolation, and continued denial of direct writes. It
+also runs two overlapping PostgreSQL sessions for the same user and verifies
+that the transaction advisory lock yields one farm and one owner membership.

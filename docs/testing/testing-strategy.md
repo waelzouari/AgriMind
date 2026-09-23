@@ -44,7 +44,8 @@ recovery receive the same attention as happy paths.
 
 ### Backend / Supabase
 
-- Migration up/down validation in an ephemeral local Supabase stack.
+- Migration/reset validation in disposable PostgreSQL databases and the local
+  Supabase stack when its CLI is installed.
 - Constraints, indexes, timestamps, idempotency keys, and invalid enum/range
   inputs.
 - RLS matrix with at least user A, user B, anonymous, and privileged ingestion

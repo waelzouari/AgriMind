@@ -5,4 +5,6 @@ functions, and tests are version controlled under `supabase/`; independently
 deployed ingestion or inference services live under `services/` when their
 owning tickets begin.
 
-No backend implementation is part of AGM-001.
+AGM-010 introduces the first relational schema migration under
+`supabase/migrations/`. It deliberately contains no RLS policy, ingestion
+service, privileged credential, or application API.

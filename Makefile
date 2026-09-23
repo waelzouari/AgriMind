@@ -1,4 +1,4 @@
-.PHONY: bootstrap format lint typecheck test secrets repo-check check
+.PHONY: bootstrap format lint typecheck test db-test secrets repo-check check
 
 bootstrap:
 	python3 -m pip install -e "./edge[dev]"
@@ -14,6 +14,9 @@ typecheck:
 
 test:
 	python3 -m pytest edge/tests
+
+db-test:
+	python3 scripts/test_supabase_schema.py
 
 secrets: # pragma: allowlist secret
 	python3 scripts/check_secrets.py # pragma: allowlist secret

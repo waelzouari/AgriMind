@@ -1,3 +1,4 @@
+import 'package:agrimind/core/design_system/design_system.dart';
 import 'package:agrimind/core/widgets/widgets.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/presentation/authenticated_home_page.dart';
@@ -22,8 +23,13 @@ class FarmGate extends StatelessWidget {
       builder: (context, _) => switch (farmController.status) {
         FarmStatus.idle || FarmStatus.checking => const AgriMindScaffold(
           body: Center(
-            child: AgriMindLoadingIndicator(
-              label: 'Vérification de votre ferme',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AgriMindLogo(),
+                SizedBox(height: AgriMindSpacing.xl),
+                AgriMindLoadingIndicator(label: 'Vérification de votre ferme'),
+              ],
             ),
           ),
         ),

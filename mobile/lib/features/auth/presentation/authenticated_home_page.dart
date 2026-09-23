@@ -17,24 +17,38 @@ class AuthenticatedHomePage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AgriMindScaffold(
-      title: 'AGRIMIND',
+      title: 'AgriMind',
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text(farm.name, style: AgriMindTypography.heading2),
-          const SizedBox(height: AgriMindSpacing.sm),
-          Text(
-            'Votre ferme est configurée. Les fonctionnalités agricoles '
-            'seront ajoutées dans leurs tickets dédiés.',
-            style: AgriMindTypography.bodySecondary,
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: AgriMindLogo(compact: true),
           ),
           const SizedBox(height: AgriMindSpacing.xl),
-          AgriMindButton(
-            label: 'Se déconnecter',
-            onPressed: controller.signOut,
-            loading: controller.isSubmitting,
-            variant: AgriMindButtonVariant.secondary,
-            icon: Icons.logout_rounded,
+          AgriMindCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Text(farm.name, style: AgriMindTypography.heading2),
+                const SizedBox(height: AgriMindSpacing.sm),
+                Text(
+                  'Votre ferme est configurée. Les fonctionnalités agricoles '
+                  'seront ajoutées dans leurs tickets dédiés.',
+                  style: AgriMindTypography.bodySecondary.copyWith(
+                    color: AgriMindColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AgriMindSpacing.xl),
+                AgriMindButton(
+                  label: 'Se déconnecter',
+                  onPressed: controller.signOut,
+                  loading: controller.isSubmitting,
+                  variant: AgriMindButtonVariant.secondary,
+                  icon: Icons.logout_rounded,
+                ),
+              ],
+            ),
           ),
           if (controller.errorMessage case final message?) ...[
             const SizedBox(height: AgriMindSpacing.md),

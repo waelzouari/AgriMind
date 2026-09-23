@@ -29,8 +29,29 @@ void main() {
     repository.restoreCompleter!.complete(null);
     await tester.pumpAndSettle();
     expect(find.byType(SignInPage), findsOneWidget);
+    expect(find.bySemanticsLabel('AgriMind'), findsOneWidget);
     await repository.close();
   });
+
+  for (final size in [const Size(320, 568), const Size(390, 844)]) {
+    testWidgets('sign-in remains usable without overflow at $size', (
+      tester,
+    ) async {
+      await tester.binding.setSurfaceSize(size);
+      addTearDown(() => tester.binding.setSurfaceSize(null));
+      final repository = FakeAuthenticationRepository();
+
+      await tester.pumpWidget(
+        authTestApp(AuthenticationController(repository)),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Bon retour'), findsOneWidget);
+      expect(find.text('Se connecter'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      await repository.close();
+    });
+  }
 
   testWidgets('restores a persisted session without showing sign-in', (
     tester,

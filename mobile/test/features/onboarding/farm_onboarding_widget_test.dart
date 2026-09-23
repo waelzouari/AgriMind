@@ -97,4 +97,31 @@ void main() {
     expect(find.text('Ferme retrouvée'), findsOneWidget);
     await authRepository.close();
   });
+
+  testWidgets('onboarding remains usable on a narrow scaled viewport', (
+    tester,
+  ) async {
+    await tester.binding.setSurfaceSize(const Size(320, 568));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    final authRepository = FakeAuthenticationRepository(
+      restoredSession: session,
+    );
+    final farmRepository = FakeFarmRepository();
+
+    await tester.pumpWidget(
+      MediaQuery(
+        data: const MediaQueryData(textScaler: TextScaler.linear(1.3)),
+        child: authTestApp(
+          AuthenticationController(authRepository),
+          farmRepository: farmRepository,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Configurez votre ferme'), findsOneWidget);
+    expect(find.text('Créer ma ferme'), findsOneWidget);
+    expect(tester.takeException(), isNull);
+    await authRepository.close();
+  });
 }

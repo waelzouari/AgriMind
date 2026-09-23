@@ -6,4 +6,6 @@ abstract final class AgriMindComponentSizes {
   static const double cardMinHeight = 72;
   static const double contentMaxWidth = 720;
   static const double loadingIndicator = 24;
+  static const double logoWidth = 220;
+  static const double logoCompactWidth = 148;
 }

@@ -1,3 +1,4 @@
+import 'package:agrimind/core/design_system/design_system.dart';
 import 'package:agrimind/core/widgets/widgets.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/presentation/sign_in_page.dart';
@@ -22,8 +23,13 @@ class AuthenticationGate extends StatelessWidget {
       builder: (context, _) => switch (controller.status) {
         AuthenticationStatus.restoring => const AgriMindScaffold(
           body: Center(
-            child: AgriMindLoadingIndicator(
-              label: 'Restauration de la session',
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                AgriMindLogo(),
+                SizedBox(height: AgriMindSpacing.xl),
+                AgriMindLoadingIndicator(label: 'Restauration de la session'),
+              ],
             ),
           ),
         ),

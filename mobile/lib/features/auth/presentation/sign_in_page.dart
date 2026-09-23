@@ -43,36 +43,38 @@ class _SignInPageState extends State<SignInPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: AgriMindSpacing.xxxl),
-            Semantics(
-              header: true,
-              child: Text(
-                'AGRIMIND',
-                style: AgriMindTypography.heading1,
-                textAlign: TextAlign.center,
-              ),
-            ),
-            const SizedBox(height: AgriMindSpacing.sm),
-            Text(
-              'Connectez-vous pour accéder à votre espace agricole.',
-              style: AgriMindTypography.bodySecondary,
-              textAlign: TextAlign.center,
-            ),
-            const SizedBox(height: AgriMindSpacing.xxl),
+            const SizedBox(height: AgriMindSpacing.xl),
+            const Center(child: AgriMindLogo()),
+            const SizedBox(height: AgriMindSpacing.xl),
             AgriMindCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextFormField(
-                    key: const Key('sign-in-email'),
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      'Bon retour',
+                      style: AgriMindTypography.heading2,
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  const SizedBox(height: AgriMindSpacing.xs),
+                  Text(
+                    'Connectez-vous à votre compte AgriMind.',
+                    style: AgriMindTypography.bodySecondary.copyWith(
+                      color: AgriMindColors.textSecondary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: AgriMindSpacing.xl),
+                  AgriMindTextField(
+                    fieldKey: const Key('sign-in-email'),
                     controller: _emailController,
                     enabled: !widget.controller.isSubmitting,
+                    label: 'Adresse e-mail',
+                    leadingIcon: Icons.email_outlined,
                     keyboardType: TextInputType.emailAddress,
                     autofillHints: const [AutofillHints.email],
-                    decoration: const InputDecoration(
-                      labelText: 'Adresse e-mail',
-                      prefixIcon: Icon(Icons.email_outlined),
-                    ),
                     validator: (value) {
                       final email = value?.trim() ?? '';
                       if (!RegExp(
@@ -84,16 +86,14 @@ class _SignInPageState extends State<SignInPage> {
                     },
                   ),
                   const SizedBox(height: AgriMindSpacing.lg),
-                  TextFormField(
-                    key: const Key('sign-in-password'),
+                  AgriMindTextField(
+                    fieldKey: const Key('sign-in-password'),
                     controller: _passwordController,
                     enabled: !widget.controller.isSubmitting,
+                    label: 'Mot de passe',
+                    leadingIcon: Icons.lock_outline_rounded,
                     obscureText: true,
                     autofillHints: const [AutofillHints.password],
-                    decoration: const InputDecoration(
-                      labelText: 'Mot de passe',
-                      prefixIcon: Icon(Icons.lock_outline_rounded),
-                    ),
                     validator: (value) => (value == null || value.isEmpty)
                         ? 'Saisissez votre mot de passe.'
                         : null,
@@ -118,10 +118,12 @@ class _SignInPageState extends State<SignInPage> {
                     label: 'Se connecter',
                     onPressed: _submit,
                     loading: widget.controller.isSubmitting,
+                    icon: Icons.arrow_forward_rounded,
                   ),
                 ],
               ),
             ),
+            const SizedBox(height: AgriMindSpacing.xl),
           ],
         ),
       ),

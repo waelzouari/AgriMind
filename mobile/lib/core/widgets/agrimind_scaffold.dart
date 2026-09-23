@@ -24,19 +24,33 @@ class AgriMindScaffold extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Widget content = Padding(padding: padding, child: body);
-    if (scrollable) content = SingleChildScrollView(child: content);
+    if (scrollable) {
+      content = SingleChildScrollView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+        child: content,
+      );
+    }
     return Scaffold(
       appBar: title == null
           ? null
           : AppBar(title: Text(title!), actions: actions),
-      body: SafeArea(
-        child: Align(
-          alignment: Alignment.topCenter,
-          child: ConstrainedBox(
-            constraints: const BoxConstraints(
-              maxWidth: AgriMindComponentSizes.contentMaxWidth,
+      body: DecoratedBox(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AgriMindColors.background, AgriMindColors.backgroundSoft],
+          ),
+        ),
+        child: SafeArea(
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                maxWidth: AgriMindComponentSizes.contentMaxWidth,
+              ),
+              child: content,
             ),
-            child: content,
           ),
         ),
       ),

@@ -11,13 +11,14 @@ abstract final class AgriMindTheme {
     const colorScheme = ColorScheme.light(
       primary: AgriMindColors.primaryGreen,
       onPrimary: AgriMindColors.onPrimary,
-      secondary: AgriMindColors.earthBrown,
+      secondary: AgriMindColors.sandAccent,
       onSecondary: AgriMindColors.onPrimary,
       error: AgriMindColors.error,
       onError: AgriMindColors.onPrimary,
       surface: AgriMindColors.surface,
       onSurface: AgriMindColors.textPrimary,
       outline: AgriMindColors.outline,
+      surfaceContainerHighest: AgriMindColors.surfaceMuted,
     );
     final radius = BorderRadius.circular(AgriMindRadius.medium);
     const minimumButtonSize = Size(
@@ -47,12 +48,17 @@ abstract final class AgriMindTheme {
         elevation: AgriMindElevation.low,
         margin: EdgeInsets.zero,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AgriMindRadius.large),
+          borderRadius: BorderRadius.circular(AgriMindRadius.card),
           side: const BorderSide(color: AgriMindColors.outline),
         ),
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
+          backgroundColor: AgriMindColors.primaryGreen,
+          foregroundColor: AgriMindColors.onPrimary,
+          disabledBackgroundColor: AgriMindColors.disabled,
+          disabledForegroundColor: AgriMindColors.surface,
+          elevation: AgriMindElevation.none,
           minimumSize: minimumButtonSize,
           padding: buttonPadding,
           shape: RoundedRectangleBorder(borderRadius: radius),
@@ -61,6 +67,8 @@ abstract final class AgriMindTheme {
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
+          foregroundColor: AgriMindColors.primaryDark,
+          side: const BorderSide(color: AgriMindColors.primaryGreen),
           minimumSize: minimumButtonSize,
           padding: buttonPadding,
           shape: RoundedRectangleBorder(borderRadius: radius),
@@ -78,6 +86,35 @@ abstract final class AgriMindTheme {
       ),
       progressIndicatorTheme: const ProgressIndicatorThemeData(
         color: AgriMindColors.primaryGreen,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: AgriMindColors.surface,
+        contentPadding: const EdgeInsets.symmetric(
+          horizontal: AgriMindSpacing.lg,
+          vertical: AgriMindSpacing.md,
+        ),
+        border: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: const BorderSide(color: AgriMindColors.outline),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: const BorderSide(color: AgriMindColors.outline),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: const BorderSide(
+            color: AgriMindColors.primaryGreen,
+            width: 2,
+          ),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: radius,
+          borderSide: const BorderSide(color: AgriMindColors.error),
+        ),
+        prefixIconColor: AgriMindColors.primaryDark,
+        labelStyle: AgriMindTypography.bodySecondary,
       ),
       focusColor: AgriMindColors.lightGreen,
     );

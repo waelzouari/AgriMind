@@ -110,16 +110,29 @@ class PumpSafetyConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class PersistenceConfig:
+    """Local SQLite path; data retention remains an application invariant."""
+
+    database_path: Path = Path("/var/lib/agrimind/edge.sqlite3")
+
+    def __post_init__(self) -> None:
+        if not self.database_path.is_absolute():
+            raise ValueError("SQLite database path must use an absolute path")
+
+
+@dataclass(frozen=True, slots=True)
 class RuntimeConfig:
     mqtt: MqttConfig
     pump_safety: PumpSafetyConfig
     credentials: MqttCredentials = field(repr=False)
     hardware: HardwareConfig = field(default_factory=HardwareConfig)
+    persistence: PersistenceConfig = field(default_factory=PersistenceConfig)
 
     def __repr__(self) -> str:
         return (
             f"RuntimeConfig(mqtt={self.mqtt!r}, pump_safety={self.pump_safety!r}, "
-            f"credentials={self.credentials!r}, hardware={self.hardware!r})"
+            f"credentials={self.credentials!r}, hardware={self.hardware!r}, "
+            f"persistence={self.persistence!r})"
         )
 
     @classmethod
@@ -127,9 +140,7 @@ class RuntimeConfig:
         """Validate one process environment while maintaining secret boundaries."""
 
         farm_id = parse_uuid(_required(environment, "AGRIMIND_FARM_ID"), "AGRIMIND_FARM_ID")
-        device_id = parse_uuid(
-            _required(environment, "AGRIMIND_DEVICE_ID"), "AGRIMIND_DEVICE_ID"
-        )
+        device_id = parse_uuid(_required(environment, "AGRIMIND_DEVICE_ID"), "AGRIMIND_DEVICE_ID")
         tls_enabled = _boolean(environment, "AGRIMIND_MQTT_TLS_ENABLED", True)
         ca_value = environment.get("AGRIMIND_MQTT_CA_FILE", "").strip()
         mqtt = MqttConfig(
@@ -143,15 +154,9 @@ class RuntimeConfig:
                 environment, "AGRIMIND_TELEMETRY_INTERVAL_SECONDS", 5
             ),
             keepalive_seconds=_integer(environment, "AGRIMIND_MQTT_KEEPALIVE_SECONDS", 60),
-            reconnect_min_seconds=_integer(
-                environment, "AGRIMIND_MQTT_RECONNECT_MIN_SECONDS", 1
-            ),
-            reconnect_max_seconds=_integer(
-                environment, "AGRIMIND_MQTT_RECONNECT_MAX_SECONDS", 60
-            ),
-            contract_version=environment.get(
-                "AGRIMIND_CONTRACT_VERSION", TOPIC_VERSION
-            ).strip(),
+            reconnect_min_seconds=_integer(environment, "AGRIMIND_MQTT_RECONNECT_MIN_SECONDS", 1),
+            reconnect_max_seconds=_integer(environment, "AGRIMIND_MQTT_RECONNECT_MAX_SECONDS", 60),
+            contract_version=environment.get("AGRIMIND_CONTRACT_VERSION", TOPIC_VERSION).strip(),
         )
         credentials = MqttCredentials(
             username=_required(environment, "AGRIMIND_MQTT_USERNAME"),
@@ -170,4 +175,11 @@ class RuntimeConfig:
             ),
             credentials=credentials,
             hardware=HardwareConfig.from_environment(environment),
+            persistence=PersistenceConfig(
+                database_path=Path(
+                    environment.get(
+                        "AGRIMIND_SQLITE_PATH", "/var/lib/agrimind/edge.sqlite3"
+                    ).strip()
+                )
+            ),
         )

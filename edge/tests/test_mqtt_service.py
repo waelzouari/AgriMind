@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from datetime import UTC, datetime
 from itertools import count
+from pathlib import Path
 from uuid import UUID
 
 from agrimind_edge.adapters.fake import FakeDeviceStatusSource, FakeMqttTransport
-from agrimind_edge.application import CloudMqttService, TelemetryMapper
+from agrimind_edge.adapters.persistence import SqliteEventOutboxStore
+from agrimind_edge.application import CloudMqttService, OutboxService, TelemetryMapper
 from agrimind_edge.contracts.enums import DeviceHealth
 from agrimind_edge.contracts.models import DeviceStatus, Telemetry
 from agrimind_edge.contracts.topics import TopicBuilder
@@ -175,3 +177,35 @@ def test_mqtt_path_has_no_pump_capability() -> None:
     assert not hasattr(service, "pump")
     assert not hasattr(transport, "turn_on")
     assert not hasattr(transport, "turn_off")
+
+
+def test_offline_telemetry_is_buffered_and_drained_on_reconnect(tmp_path: Path) -> None:
+    transport = FakeMqttTransport(connect_failure=OSError("offline"))
+    store = SqliteEventOutboxStore(tmp_path / "edge.sqlite3")
+    outbox = OutboxService(
+        store,
+        transport,
+        clock=lambda: NOW,
+        drain_submitter=lambda callback: callback(),
+    )
+    source = FakeDeviceStatusSource(DeviceRuntimeStatus(False, DeviceHealth.HEALTHY, 3600, "0.0.0"))
+    service = CloudMqttService(
+        transport,
+        TelemetryMapper(FARM_ID, DEVICE_ID),
+        TopicBuilder(FARM_ID, DEVICE_ID),
+        source,
+        durable_publisher=outbox,
+        clock=lambda: NOW,
+    )
+    service.start()
+
+    offline = service.publish_snapshot(snapshot())
+    assert offline.published == 0
+    assert len(store.pending(limit=10)) == 4
+
+    transport.connect_failure = None
+    transport.simulate_reconnect()
+
+    assert store.pending(limit=10) == ()
+    telemetry_messages = [item for item in transport.publications if "/telemetry/" in item.topic]
+    assert len(telemetry_messages) == 4

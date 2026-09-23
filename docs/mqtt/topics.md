@@ -1,9 +1,7 @@
 # MQTT v1 wire contract
 
-Status: contracts were introduced by AGM-003. AGM-006 implements broker-neutral
-cloud connection, telemetry/status publication, verified TLS, LWT, bounded
-reconnect configuration, and device ACL design. Pump command subscription and
-durable offline buffering remain later work.
+Status: AGM-003 defines contracts; AGM-006/007 implement cloud lifecycle,
+telemetry, commands, and ACKs; AGM-008 durably buffers telemetry and ACKs.
 
 ## AGM-006 connection lifecycle
 
@@ -36,9 +34,10 @@ capped at `AGRIMIND_MQTT_RECONNECT_MAX_SECONDS`. Broker loss changes connection
 state and suppresses new telemetry publication; it has no pump capability and
 cannot bypass AGM-005.
 
-Persistent telemetry buffering is deliberately excluded. While disconnected,
-new snapshots are counted as skipped and not queued. The later SQLite
-event/outbox ticket owns durable offline capture and replay.
+While disconnected, telemetry is inserted into the local SQLite event/outbox
+store. Reconnection requests an ordered background drain so the Paho callback
+is not blocked. ACKs use the same durable path. Device presence and LWT remain
+direct retained publications and are never inserted into the outbox.
 
 ## Common rules
 
@@ -125,8 +124,8 @@ AGM-006 maps `SensorSnapshot` without changing that internal model:
   agronomic feature.
 
 Each mapped measurement is published to `TopicBuilder.telemetry(...)` with QoS
-1 and `retain=false`. QoS 1 means at-least-once transport delivery; it is not
-proof of persistence or application processing.
+1 and `retain=false`. SQLite marks a publication delivered only after PUBACK.
+A crash between PUBACK and that update can produce an at-least-once duplicate.
 
 ## Pump command
 
@@ -219,8 +218,8 @@ produce `completed` directly after OFF is confirmed. Every ACK uses QoS 1 and
 
 Exact duplicate commands replay the most recent stored ACK without another
 physical action. Reusing a `command_id` with different command content produces
-`command_id_conflict`. This idempotency cache is process-local and does not
-survive an edge-process or Raspberry Pi restart.
+`command_id_conflict`. AGM-008 persists the command fingerprint and latest ACK,
+so this holds across restart. Stored commands are never executed at startup.
 
 ## Device status
 

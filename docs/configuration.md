@@ -6,6 +6,17 @@ invalid. It composes the unchanged `HardwareConfig` from AGM-002.
 
 ## Non-secret configuration
 
+### Flutter client
+
+The mobile build receives `AGRIMIND_SUPABASE_URL` and
+`AGRIMIND_SUPABASE_ANON_KEY` through Flutter `--dart-define` values. Both are
+public client configuration; the latter may be the Supabase anonymous or newer
+publishable key. They must be paired with AGM-011 RLS. Flutter must never
+receive `service_role`, a database password, a JWT signing secret, or device
+credentials. Local `.env` files are not bundled or loaded by the mobile app.
+
+### Edge device
+
 | Variable | Rule |
 |---|---|
 | `AGRIMIND_FARM_ID` | required canonical non-zero UUID |

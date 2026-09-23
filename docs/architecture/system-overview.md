@@ -178,6 +178,16 @@ returns every protected route to sign-in. The SDK owns token persistence and
 refresh. This client-side gate improves navigation behavior but does not replace
 AGM-011 RLS authorization.
 
+AGM-016 extends that gate only after authentication. A farm controller queries
+the RLS-filtered `farms` relation through a repository port and distinguishes a
+missing farm from a network or service failure. The minimal onboarding form
+collects only a normalized name. Creation uses the authenticated
+`create_farm_for_current_user(text)` RPC, which derives identity from
+`auth.uid()`, atomically creates the farm and owner membership, and serializes
+same-user attempts with a transaction advisory lock. Direct client inserts and
+the existing AGM-011 policies remain unchanged. This is a one-farm UI workflow,
+not an irreversible database restriction or a Farm Manager.
+
 - Broker ACLs restrict devices to their farm telemetry/status and command
   subscriptions; users receive only authorized farm topics.
 - Commands are schema-validated, expiry-bounded, idempotent, allow-listed, and

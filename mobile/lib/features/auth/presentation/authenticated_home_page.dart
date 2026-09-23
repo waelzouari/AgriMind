@@ -1,12 +1,18 @@
 import 'package:agrimind/core/design_system/design_system.dart';
 import 'package:agrimind/core/widgets/widgets.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
+import 'package:agrimind/features/onboarding/domain/farm.dart';
 import 'package:flutter/material.dart';
 
 class AuthenticatedHomePage extends StatelessWidget {
-  const AuthenticatedHomePage({required this.controller, super.key});
+  const AuthenticatedHomePage({
+    required this.controller,
+    required this.farm,
+    super.key,
+  });
 
   final AuthenticationController controller;
+  final Farm farm;
 
   @override
   Widget build(BuildContext context) {
@@ -15,10 +21,10 @@ class AuthenticatedHomePage extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Text('Session active', style: AgriMindTypography.heading2),
+          Text(farm.name, style: AgriMindTypography.heading2),
           const SizedBox(height: AgriMindSpacing.sm),
           Text(
-            'Votre session est restaurée. Les fonctionnalités agricoles '
+            'Votre ferme est configurée. Les fonctionnalités agricoles '
             'seront ajoutées dans leurs tickets dédiés.',
             style: AgriMindTypography.bodySecondary,
           ),

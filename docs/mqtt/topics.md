@@ -452,6 +452,17 @@ topic or identity, or another `command_id` are ignored. A timeout explicitly
 leaves physical state unknown. The Raspberry Pi remains the final authority for
 pump safety and idempotency.
 
+### AGM-018 supervised Android smoke test
+
+On 2026-09-24, the complete manual-irrigation path was validated with the
+Flutter application running on a physical Samsung Galaxy A55, HiveMQ Cloud over
+TLS, and the edge runtime running locally with `FakePump` and `FakeScheduler`.
+A non-retained QoS 1 pump command reached the edge safety path, and the Android
+application received the expected correlated `accepted` then `completed` ACK
+cycle. No Raspberry Pi, GPIO, relay, or physical pump was involved. Automated
+tests remain the evidence for negative, timeout, duplicate, malformed, and
+reconnection cases; no credential or privileged Supabase key is recorded here.
+
 ### AGM-007 fake-pump command validation
 
 From the repository root, explicitly start the supervised command path:

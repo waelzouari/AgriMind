@@ -5,7 +5,10 @@ import 'package:agrimind/features/dashboard/application/device_repository.dart';
 import 'package:agrimind/features/dashboard/application/telemetry_repository.dart';
 import 'package:agrimind/features/dashboard/domain/device.dart';
 import 'package:agrimind/features/dashboard/domain/telemetry_reading.dart';
+import 'package:agrimind/features/irrigation/application/manual_irrigation_controller.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../helpers/fake_manual_irrigation_repository.dart';
 
 const farmId = 'efe00b4d-01e6-4565-8d86-18ba27f76666';
 const deviceId = '4b9b0c3e-e810-4225-93d8-fd69523a295e';
@@ -70,6 +73,11 @@ void main() {
       staleAfter: const Duration(seconds: 30),
       clock: () => DateTime.parse('2026-09-23T18:00:20Z'),
       startFreshnessTimer: false,
+      manualIrrigation: ManualIrrigationController(
+        repository: FakeManualIrrigationRepository(),
+        acknowledgementTimeout: const Duration(seconds: 15),
+        completionGrace: const Duration(seconds: 30),
+      ),
     );
   });
   tearDown(() => controller.dispose());
@@ -77,7 +85,7 @@ void main() {
   test(
     'resolves active device before opening MQTT and tracks lifecycle',
     () async {
-      await controller.start(farmId);
+      await controller.start(farmId, requestedBy: farmId);
       expect(repository.connectedFarm, farmId);
       expect(repository.connectedDevice, deviceId);
       repository.controller.add(
@@ -94,7 +102,7 @@ void main() {
   );
 
   test('keeps four metrics and ignores duplicate and older messages', () async {
-    await controller.start(farmId);
+    await controller.start(farmId, requestedBy: farmId);
     for (final metric in TelemetryMetric.values) {
       repository.controller.add(TelemetryReceived(reading(metric, value: 10)));
     }
@@ -119,7 +127,7 @@ void main() {
   });
 
   test('marks old telemetry stale and clears state on stop', () async {
-    await controller.start(farmId);
+    await controller.start(farmId, requestedBy: farmId);
     final old = reading(
       TelemetryMetric.temperature,
       time: '2026-09-23T17:59:00Z',

@@ -4,6 +4,7 @@ import 'package:agrimind/features/dashboard/application/device_repository.dart';
 import 'package:agrimind/features/dashboard/application/telemetry_repository.dart';
 import 'package:agrimind/features/dashboard/domain/device.dart';
 import 'package:agrimind/features/dashboard/domain/telemetry_reading.dart';
+import 'package:agrimind/features/irrigation/application/manual_irrigation_controller.dart';
 import 'package:flutter/foundation.dart';
 
 typedef Clock = DateTime Function();
@@ -15,6 +16,7 @@ final class DashboardController extends ChangeNotifier {
     required this._deviceRepository,
     required this._telemetryRepository,
     required this._staleAfter,
+    required this.manualIrrigation,
     Clock? clock,
     bool startFreshnessTimer = true,
   }) : _clock = clock ?? DateTime.now,
@@ -24,6 +26,7 @@ final class DashboardController extends ChangeNotifier {
   final DeviceRepository _deviceRepository;
   final TelemetryRepository _telemetryRepository;
   final Duration _staleAfter;
+  final ManualIrrigationController manualIrrigation;
   final Clock _clock;
   final bool _startFreshnessTimer;
   final Map<TelemetryMetric, TelemetryReading> _readings = {};
@@ -32,6 +35,8 @@ final class DashboardController extends ChangeNotifier {
   StreamSubscription<TelemetryEvent>? _subscription;
   Timer? _freshnessTimer;
   Device? _device;
+  String? _farmId;
+  String? _requestedBy;
   MqttConnectionPhase _phase = MqttConnectionPhase.idle;
   String? _errorMessage;
   bool _disposed = false;
@@ -51,8 +56,10 @@ final class DashboardController extends ChangeNotifier {
       _clock().toUtc().difference(reading.recordedAt).compareTo(_staleAfter) >
       0;
 
-  Future<void> start(String farmId) async {
+  Future<void> start(String farmId, {required String requestedBy}) async {
     await stop();
+    _farmId = farmId;
+    _requestedBy = requestedBy;
     _phase = MqttConnectionPhase.connecting;
     _errorMessage = null;
     notifyListeners();
@@ -61,6 +68,11 @@ final class DashboardController extends ChangeNotifier {
       if (_disposed) return;
       _device = device;
       _subscription = _telemetryRepository.events.listen(_onEvent);
+      await manualIrrigation.start(
+        farmId: farmId,
+        deviceId: device.id,
+        requestedBy: requestedBy,
+      );
       if (_startFreshnessTimer) {
         _freshnessTimer = Timer.periodic(
           const Duration(seconds: 1),
@@ -109,7 +121,12 @@ final class DashboardController extends ChangeNotifier {
     if (_readings.isNotEmpty) notifyListeners();
   }
 
-  Future<void> retry(String farmId) => start(farmId);
+  Future<void> retry() async {
+    final farmId = _farmId;
+    final requestedBy = _requestedBy;
+    if (farmId == null || requestedBy == null) return;
+    await start(farmId, requestedBy: requestedBy);
+  }
 
   Future<void> stop() async {
     _freshnessTimer?.cancel();
@@ -117,10 +134,13 @@ final class DashboardController extends ChangeNotifier {
     await _subscription?.cancel();
     _subscription = null;
     await _telemetryRepository.disconnect();
+    await manualIrrigation.stop();
     _readings.clear();
     _seenMessageIds.clear();
     _messageIdOrder.clear();
     _device = null;
+    _farmId = null;
+    _requestedBy = null;
     _phase = MqttConnectionPhase.idle;
     _errorMessage = null;
   }
@@ -131,6 +151,7 @@ final class DashboardController extends ChangeNotifier {
     _freshnessTimer?.cancel();
     unawaited(_subscription?.cancel());
     unawaited(_telemetryRepository.disconnect());
+    manualIrrigation.dispose();
     super.dispose();
   }
 }

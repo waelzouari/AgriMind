@@ -420,6 +420,38 @@ disconnect/reconnect recovery, malformed or cross-identity input, and did not
 subscribe to or validate `status/device`. No credential or privileged key is
 recorded here.
 
+## AGM-018 mobile manual irrigation
+
+The manual irrigation flow publishes one canonical v1 ON command per confirmed
+user action to the resolved farm/device `commands/pump` topic at QoS 1 with
+retain disabled. `requested_by` is the authenticated Supabase user UUID. The
+controller preserves the same `command_id` through publication, reconnects,
+and the full acknowledgement lifecycle; it never retries by inventing another
+command.
+
+HiveMQ Free/Serverless associates one permission with each credential, so the
+TecWeek MVP uses three independent, least-privilege mobile sessions:
+
+| Credential purpose | Capability | Exact scope for the resolved device |
+|---|---|---|
+| telemetry | Subscribe Only | `telemetry/+` |
+| command | Publish Only | `commands/pump` |
+| acknowledgement | Subscribe Only | `acks/+` |
+
+The credentials have separate passwords. No principal receives `#`, a device
+subtree wildcard, `status/device`, sync ACK, irrigation-result, cross-device,
+or cross-farm access. This three-session split is an MVP infrastructure
+constraint, not a general production recommendation; production should use
+short-lived, user/farm-scoped broker authorization.
+
+A broker PUBACK means only that HiveMQ accepted the QoS 1 publication. The UI
+continues to show an unconfirmed state until a strict, correlated edge ACK is
+received. Only the edge's `accepted`, `rejected`, `completed`, or `failed` ACK
+may change execution state. ACKs with malformed JSON/schema, an unexpected
+topic or identity, or another `command_id` are ignored. A timeout explicitly
+leaves physical state unknown. The Raspberry Pi remains the final authority for
+pump safety and idempotency.
+
 ### AGM-007 fake-pump command validation
 
 From the repository root, explicitly start the supervised command path:

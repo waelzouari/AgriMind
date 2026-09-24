@@ -8,6 +8,9 @@ import 'package:agrimind/features/dashboard/application/dashboard_controller.dar
 import 'package:agrimind/features/dashboard/infrastructure/mqtt_telemetry_repository.dart';
 import 'package:agrimind/features/dashboard/infrastructure/mqtt_wire_client.dart';
 import 'package:agrimind/features/dashboard/infrastructure/supabase_device_repository.dart';
+import 'package:agrimind/features/irrigation/application/manual_irrigation_controller.dart';
+import 'package:agrimind/features/irrigation/infrastructure/mqtt_command_wire_client.dart';
+import 'package:agrimind/features/irrigation/infrastructure/mqtt_manual_irrigation_repository.dart';
 import 'package:agrimind/features/onboarding/application/farm_controller.dart';
 import 'package:agrimind/features/onboarding/infrastructure/supabase_farm_repository.dart';
 import 'package:flutter/material.dart';
@@ -35,11 +38,33 @@ Future<void> main() async {
             PahoStyleMqttWireClient(
               host: config.mqttHost,
               port: config.mqttPort,
-              username: config.mqttUsername,
-              password: config.mqttPassword,
+              username: config.telemetryMqttUsername,
+              password: config.telemetryMqttPassword,
             ),
           ),
           staleAfter: Duration(seconds: config.telemetryStaleSeconds),
+          manualIrrigation: ManualIrrigationController(
+            repository: MqttManualIrrigationRepository(
+              commandClient: MqttCommandPublisherClient(
+                host: config.mqttHost,
+                port: config.mqttPort,
+                username: config.commandMqttUsername,
+                password: config.commandMqttPassword,
+              ),
+              acknowledgementClient: PahoStyleMqttWireClient(
+                host: config.mqttHost,
+                port: config.mqttPort,
+                username: config.ackMqttUsername,
+                password: config.ackMqttPassword,
+              ),
+            ),
+            acknowledgementTimeout: Duration(
+              seconds: config.commandAcknowledgementTimeoutSeconds,
+            ),
+            completionGrace: Duration(
+              seconds: config.commandCompletionGraceSeconds,
+            ),
+          ),
         ),
       ),
     );

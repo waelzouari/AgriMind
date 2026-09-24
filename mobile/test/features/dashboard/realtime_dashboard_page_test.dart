@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:agrimind/core/design_system/agrimind_theme.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
+import 'package:agrimind/features/auth/domain/auth_session.dart';
 import 'package:agrimind/features/dashboard/application/dashboard_controller.dart';
 import 'package:agrimind/features/dashboard/application/device_repository.dart';
 import 'package:agrimind/features/dashboard/application/telemetry_repository.dart';
@@ -9,11 +10,13 @@ import 'package:agrimind/features/dashboard/domain/device.dart';
 import 'package:agrimind/features/dashboard/domain/telemetry_reading.dart';
 import 'package:agrimind/features/dashboard/presentation/dashboard_session.dart';
 import 'package:agrimind/features/dashboard/presentation/realtime_dashboard_page.dart';
+import 'package:agrimind/features/irrigation/application/manual_irrigation_controller.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/fake_authentication_repository.dart';
+import '../../helpers/fake_manual_irrigation_repository.dart';
 
 const farm = Farm(
   id: 'efe00b4d-01e6-4565-8d86-18ba27f76666',
@@ -48,6 +51,11 @@ DashboardController makeController(TelemetryRepo repository) =>
       staleAfter: const Duration(seconds: 30),
       clock: () => DateTime.parse('2026-09-23T18:01:00Z'),
       startFreshnessTimer: false,
+      manualIrrigation: ManualIrrigationController(
+        repository: FakeManualIrrigationRepository(),
+        acknowledgementTimeout: const Duration(seconds: 15),
+        completionGrace: const Duration(seconds: 30),
+      ),
     );
 
 Widget app(Widget child) =>
@@ -60,7 +68,7 @@ void main() {
     final authRepo = FakeAuthenticationRepository();
     final telemetry = TelemetryRepo();
     final controller = makeController(telemetry);
-    await controller.start(farm.id);
+    await controller.start(farm.id, requestedBy: farm.id);
     telemetry.stream.add(
       const TelemetryConnectionChanged(MqttConnectionPhase.connected),
     );
@@ -89,7 +97,7 @@ void main() {
     final authRepo = FakeAuthenticationRepository();
     final telemetry = TelemetryRepo();
     final controller = makeController(telemetry);
-    await controller.start(farm.id);
+    await controller.start(farm.id, requestedBy: farm.id);
     telemetry.stream.add(
       TelemetryReceived(
         TelemetryReading(
@@ -129,12 +137,19 @@ void main() {
   testWidgets('disposing authenticated dashboard disconnects MQTT', (
     tester,
   ) async {
-    final authRepo = FakeAuthenticationRepository();
+    final authRepo = FakeAuthenticationRepository(
+      restoredSession: const AuthSession(
+        userId: '44444444-4444-4444-8444-444444444444',
+        email: 'farmer@example.com',
+      ),
+    );
+    final authentication = AuthenticationController(authRepo);
+    await authentication.restoreSession();
     final telemetry = TelemetryRepo();
     await tester.pumpWidget(
       app(
         DashboardSession(
-          authentication: AuthenticationController(authRepo),
+          authentication: authentication,
           farm: farm,
           controllerFactory: () => makeController(telemetry),
         ),

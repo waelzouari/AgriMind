@@ -16,16 +16,23 @@ The mobile build receives its values through Flutter `--dart-define`. Local
 | `AGRIMIND_SUPABASE_URL` | required HTTPS project URL |
 | `AGRIMIND_SUPABASE_ANON_KEY` | required anonymous/publishable client key; never privileged |
 | `AGRIMIND_MOBILE_MQTT_HOST` | required TLS broker hostname without URL scheme |
-| `AGRIMIND_MOBILE_MQTT_PORT` | exactly 8883 for the AGM-017 Cloud path |
-| `AGRIMIND_MOBILE_MQTT_USERNAME`, `..._PASSWORD` | dedicated subscribe-only MVP credential, supplied locally and never committed |
+| `AGRIMIND_MOBILE_MQTT_PORT` | exactly 8883 for the AGM-017/018 Cloud paths |
+| `AGRIMIND_MOBILE_MQTT_TELEMETRY_USERNAME`, `..._PASSWORD` | dedicated Subscribe Only credential for the exact device `telemetry/+` filter |
+| `AGRIMIND_MOBILE_MQTT_COMMAND_USERNAME`, `..._PASSWORD` | separate Publish Only credential for the exact device `commands/pump` topic |
+| `AGRIMIND_MOBILE_MQTT_ACK_USERNAME`, `..._PASSWORD` | separate Subscribe Only credential for the exact device `acks/+` filter |
 | `AGRIMIND_MOBILE_TELEMETRY_STALE_SECONDS` | 5-3600; default 30 |
+| `AGRIMIND_MOBILE_COMMAND_ACK_TIMEOUT_SECONDS` | 5-120; default 15 |
+| `AGRIMIND_MOBILE_COMMAND_COMPLETION_GRACE_SECONDS` | 5-300; default 30 |
 
-The mobile broker credential is manually provisioned and scoped to the one MVP
-farm/device `telemetry/+` filter. It cannot publish. Static credentials embedded
-in an app are extractable, so production must use short-lived scoped broker
-identity or a trusted token exchange. Flutter must never receive `service_role`,
-a database password, a JWT signing secret, edge/ingestion credentials, or a
-broker principal with command/publish access.
+The three mobile broker credentials are manually provisioned and scoped to one
+MVP farm/device. The command principal can publish only to `commands/pump`; it
+cannot subscribe. The other principals can subscribe only to `telemetry/+` or
+`acks/+` respectively and cannot publish. This split is a HiveMQ Serverless MVP
+constraint, not the recommended production identity architecture. Static
+credentials embedded in an app are extractable, so production must use
+short-lived farm-scoped broker identity or a trusted token exchange. Flutter
+must never receive `service_role`, a database password, a JWT signing secret,
+or edge/ingestion credentials.
 
 ### Edge device
 

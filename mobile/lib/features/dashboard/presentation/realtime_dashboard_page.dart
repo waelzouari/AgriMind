@@ -5,6 +5,7 @@ import 'package:agrimind/features/auth/application/authentication_controller.dar
 import 'package:agrimind/features/dashboard/application/dashboard_controller.dart';
 import 'package:agrimind/features/dashboard/application/telemetry_repository.dart';
 import 'package:agrimind/features/dashboard/domain/telemetry_reading.dart';
+import 'package:agrimind/features/irrigation/presentation/manual_irrigation_card.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
 import 'package:flutter/material.dart';
 
@@ -52,7 +53,9 @@ class RealtimeDashboardPage extends StatelessWidget {
           const SizedBox(height: AgriMindSpacing.xl),
           const AgriMindSectionHeader(title: 'Capteurs en direct'),
           const SizedBox(height: AgriMindSpacing.md),
-          _DashboardBody(controller: controller, farmId: farm.id),
+          _DashboardBody(controller: controller),
+          const SizedBox(height: AgriMindSpacing.xl),
+          ManualIrrigationCard(controller: controller.manualIrrigation),
         ],
       ),
     ),
@@ -80,9 +83,8 @@ class _ConnectionBadge extends StatelessWidget {
 }
 
 class _DashboardBody extends StatelessWidget {
-  const _DashboardBody({required this.controller, required this.farmId});
+  const _DashboardBody({required this.controller});
   final DashboardController controller;
-  final String farmId;
 
   @override
   Widget build(BuildContext context) {
@@ -91,7 +93,7 @@ class _DashboardBody extends StatelessWidget {
       return AgriMindErrorState(
         title: 'Mesures indisponibles',
         message: controller.errorMessage ?? 'La connexion MQTT a échoué.',
-        onRetry: () => controller.retry(farmId),
+        onRetry: controller.retry,
       );
     }
     if (controller.readings.isEmpty) {

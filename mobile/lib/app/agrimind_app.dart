@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:agrimind/app/app_router.dart';
 import 'package:agrimind/core/config/app_config.dart';
 import 'package:agrimind/core/design_system/agrimind_theme.dart';
+import 'package:agrimind/core/widgets/agrimind_system_ui.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/presentation/authentication_gate.dart';
 import 'package:agrimind/features/dashboard/presentation/dashboard_session.dart';
@@ -58,24 +59,26 @@ class _AgriMindAppState extends State<AgriMindApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: widget.config.appName,
-      debugShowCheckedModeBanner: false,
-      theme: AgriMindTheme.light,
-      home: AuthenticationGate(
-        controller: widget.authentication,
-        farmController: widget.farmController,
-        farmManagerRepository: widget.farmManagerRepository,
-        dashboardControllerFactory: widget.dashboardControllerFactory,
-        weatherControllerFactory: widget.weatherControllerFactory,
-      ),
-      onGenerateRoute: (settings) => AppRouter.onGenerateRoute(
-        settings,
-        widget.authentication,
-        widget.farmController,
-        widget.farmManagerRepository,
-        widget.dashboardControllerFactory,
-        widget.weatherControllerFactory,
+    return AgriMindSystemUi(
+      child: MaterialApp(
+        title: widget.config.appName,
+        debugShowCheckedModeBanner: false,
+        theme: AgriMindTheme.light,
+        home: AuthenticationGate(
+          controller: widget.authentication,
+          farmController: widget.farmController,
+          farmManagerRepository: widget.farmManagerRepository,
+          dashboardControllerFactory: widget.dashboardControllerFactory,
+          weatherControllerFactory: widget.weatherControllerFactory,
+        ),
+        onGenerateRoute: (settings) => AppRouter.onGenerateRoute(
+          settings,
+          widget.authentication,
+          widget.farmController,
+          widget.farmManagerRepository,
+          widget.dashboardControllerFactory,
+          widget.weatherControllerFactory,
+        ),
       ),
     );
   }

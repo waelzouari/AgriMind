@@ -91,15 +91,17 @@ class _ConfigurationErrorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AGRIMIND',
-      debugShowCheckedModeBanner: false,
-      theme: AgriMindTheme.light,
-      home: const AgriMindScaffold(
+    return AgriMindSystemUi(
+      child: MaterialApp(
         title: 'AGRIMIND',
-        body: AgriMindErrorState(
-          title: 'Configuration indisponible',
-          message: 'La configuration publique de l’application est invalide.',
+        debugShowCheckedModeBanner: false,
+        theme: AgriMindTheme.light,
+        home: const AgriMindScaffold(
+          title: 'AGRIMIND',
+          body: AgriMindErrorState(
+            title: 'Configuration indisponible',
+            message: 'La configuration publique de l’application est invalide.',
+          ),
         ),
       ),
     );

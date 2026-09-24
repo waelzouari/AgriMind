@@ -19,6 +19,10 @@ from agrimind_edge.application.ports import (
 )
 from agrimind_edge.application.pump_command_handler import PumpCommandHandler
 from agrimind_edge.application.pump_controller import SafePumpController
+from agrimind_edge.application.scheduled_irrigation import (
+    ScheduledIrrigationRunner,
+    ScheduledIrrigationService,
+)
 from agrimind_edge.application.sensor_service import SensorService
 from agrimind_edge.application.telemetry import TelemetryMapper
 
@@ -35,6 +39,8 @@ __all__ = [
     "PumpCommandHandler",
     "PumpPort",
     "SafePumpController",
+    "ScheduledIrrigationRunner",
+    "ScheduledIrrigationService",
     "SensorService",
     "SoilSensorPort",
     "TankSensorPort",

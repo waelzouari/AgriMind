@@ -51,6 +51,9 @@ or edge/ingestion credentials.
 | `AGRIMIND_CONTRACT_VERSION` | exactly `v1` |
 | `AGRIMIND_PUMP_MAX_DURATION_SECONDS` | local limit 1-600; default 600; commands above it are rejected |
 | `AGRIMIND_SQLITE_PATH` | absolute local database path; default `/var/lib/agrimind/edge.sqlite3` |
+| `AGRIMIND_SCHEDULER_ENABLED` | explicit `true`/`false`; default false |
+| `AGRIMIND_SCHEDULER_POLL_INTERVAL_SECONDS` | number from 0.5 through 60; default 5 |
+| `AGRIMIND_SCHEDULE_MAX_LATENESS_SECONDS` | integer from 0 through 300; default 30 |
 | `AGRIMIND_MQTT_FAILOVER_ENABLED` | explicit `true`/`false`; default false |
 | `AGRIMIND_LOCAL_MQTT_HOST`, `AGRIMIND_LOCAL_MQTT_PORT` | authenticated local broker endpoint |
 | `AGRIMIND_LOCAL_MQTT_TLS_ENABLED`, `AGRIMIND_LOCAL_MQTT_CA_FILE` | optional local TLS; CA required when enabled |
@@ -60,6 +63,14 @@ or edge/ingestion credentials.
 | `AGRIMIND_MQTT_CLOUD_PROBE_INTERVAL_SECONDS` | Cloud recovery observation cadence; default 30 |
 | `AGRIMIND_MQTT_CLOUD_STABILITY_SECONDS` | required stable Cloud interval; default 30 |
 | `AGRIMIND_GPIO_*`, ADS1115/calibration/tank values | validated by `HardwareConfig` |
+
+The local scheduler is deliberately disabled by default. Its 30-second default
+lateness window is an operational MVP policy, not an agronomic threshold. A
+one-shot schedule older than the configured window is marked missed and is
+never caught up. When the scheduler is enabled, maximum lateness must be
+positive and the poll interval cannot exceed it; this prevents a nominal runner
+configuration that structurally misses its own execution window. These settings
+contain no secret.
 
 ## Secrets
 

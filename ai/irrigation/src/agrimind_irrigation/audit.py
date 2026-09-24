@@ -181,6 +181,18 @@ def _csv_rows(path: Path) -> tuple[list[str], list[list[object | None]]]:
     return header, [list(row) for row in raw_rows[1:]]
 
 
+def read_dataset_rows(
+    path: Path, expected_sheet: str
+) -> tuple[list[str], list[list[object | None]]]:
+    """Read supported dataset rows through the audited AGM-021 boundary."""
+
+    if path.suffix.lower() == ".xlsx":
+        return _xlsx_rows(path, expected_sheet)
+    if path.suffix.lower() == ".csv":
+        return _csv_rows(path)
+    raise ValueError("supported dataset formats are .csv and .xlsx")
+
+
 def _missing(value: object | None) -> bool:
     return value is None or (isinstance(value, str) and not value.strip())
 
@@ -210,12 +222,7 @@ def audit_dataset(
 
     fingerprint = _sha256(dataset_path)
     expected = (expected_sha256 or contract.dataset_sha256).upper()
-    if dataset_path.suffix.lower() == ".xlsx":
-        columns, rows = _xlsx_rows(dataset_path, contract.sheet_name)
-    elif dataset_path.suffix.lower() == ".csv":
-        columns, rows = _csv_rows(dataset_path)
-    else:
-        raise ValueError("supported dataset formats are .csv and .xlsx")
+    columns, rows = read_dataset_rows(dataset_path, contract.sheet_name)
     if len(columns) != len(set(columns)):
         raise ValueError("dataset contains duplicate column names")
     indices = {column: index for index, column in enumerate(columns)}

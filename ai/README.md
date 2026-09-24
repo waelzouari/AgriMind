@@ -10,6 +10,11 @@ ignored under `irrigation/data/raw/`; ordinary CI uses explicitly synthetic
 fixtures and does not claim to validate the real workbook. See
 [`docs/ai/irrigation-dataset.md`](../docs/ai/irrigation-dataset.md).
 
+AGM-022 adds a deterministic, validation-selected irrigation baseline and its
+dataset-specific evaluation. The methodology and measured limitations are in
+[`docs/ai/irrigation-baseline.md`](../docs/ai/irrigation-baseline.md). Generated
+model artifacts remain ignored and are not a runtime inference interface.
+
 Tank level, pump status, and sensor status are system state and are excluded
 from agronomic ML features. Computer vision is limited to `NORMAL` and
 `VISUAL_ANOMALY_DETECTED`; disease diagnosis and robot autonomy are excluded.

@@ -34,7 +34,12 @@ class _DashboardSessionState extends State<DashboardSession> {
 
   void _start() {
     _controller = widget.controllerFactory();
-    unawaited(_controller.start(widget.farm.id));
+    unawaited(
+      _controller.start(
+        widget.farm.id,
+        requestedBy: widget.authentication.session!.userId,
+      ),
+    );
   }
 
   @override

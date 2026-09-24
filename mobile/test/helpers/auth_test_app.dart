@@ -6,18 +6,24 @@ import 'package:agrimind/features/dashboard/application/device_repository.dart';
 import 'package:agrimind/features/dashboard/application/telemetry_repository.dart';
 import 'package:agrimind/features/dashboard/domain/device.dart';
 import 'package:agrimind/features/dashboard/presentation/dashboard_session.dart';
+import 'package:agrimind/features/irrigation/application/manual_irrigation_controller.dart';
 import 'package:agrimind/features/onboarding/application/farm_controller.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
 import 'package:flutter/widgets.dart';
 
 import 'fake_farm_repository.dart';
+import 'fake_manual_irrigation_repository.dart';
 
 const testConfig = AppConfig(
   supabaseUrl: 'https://project-ref.supabase.co',
   supabaseAnonKey: 'public-anon-placeholder',
   mqttHost: 'mqtt.example.com',
-  mqttUsername: 'mobile-read-only',
-  mqttPassword: 'test-placeholder', // pragma: allowlist secret
+  telemetryMqttUsername: 'mobile-read-only',
+  telemetryMqttPassword: 'test-placeholder', // pragma: allowlist secret
+  commandMqttUsername: 'mobile-command',
+  commandMqttPassword: 'test-placeholder', // pragma: allowlist secret
+  ackMqttUsername: 'mobile-ack',
+  ackMqttPassword: 'test-placeholder', // pragma: allowlist secret
 );
 
 Widget authTestApp(
@@ -40,6 +46,11 @@ Widget authTestApp(
           deviceRepository: _TestDeviceRepository(),
           telemetryRepository: _TestTelemetryRepository(),
           staleAfter: const Duration(seconds: 30),
+          manualIrrigation: ManualIrrigationController(
+            repository: FakeManualIrrigationRepository(),
+            acknowledgementTimeout: const Duration(seconds: 15),
+            completionGrace: const Duration(seconds: 30),
+          ),
           startFreshnessTimer: false,
         ),
   );

@@ -1,8 +1,8 @@
 # AgriMind mobile
 
 Flutter application foundation, centralized design system, Supabase
-authentication/session boundary, one-farm onboarding, and the AGM-017 live
-telemetry dashboard.
+authentication/session boundary, one-farm onboarding, the AGM-017 live
+telemetry dashboard, and AGM-018 acknowledged manual irrigation.
 
 ## Prerequisites
 
@@ -24,13 +24,17 @@ flutter run \
   --dart-define=AGRIMIND_SUPABASE_URL=https://PROJECT.supabase.co \
   --dart-define=AGRIMIND_SUPABASE_ANON_KEY=PUBLIC_CLIENT_KEY \
   --dart-define=AGRIMIND_MOBILE_MQTT_HOST=CLUSTER.s1.eu.hivemq.cloud \
-  --dart-define=AGRIMIND_MOBILE_MQTT_USERNAME=agrimind-mobile-mvp \
-  --dart-define=AGRIMIND_MOBILE_MQTT_PASSWORD=LOCAL_SECRET
+  --dart-define=AGRIMIND_MOBILE_MQTT_TELEMETRY_USERNAME=TELEMETRY_USERNAME \
+  --dart-define=AGRIMIND_MOBILE_MQTT_TELEMETRY_PASSWORD=LOCAL_TELEMETRY_SECRET \
+  --dart-define=AGRIMIND_MOBILE_MQTT_COMMAND_USERNAME=COMMAND_USERNAME \
+  --dart-define=AGRIMIND_MOBILE_MQTT_COMMAND_PASSWORD=LOCAL_COMMAND_SECRET \
+  --dart-define=AGRIMIND_MOBILE_MQTT_ACK_USERNAME=ACK_USERNAME \
+  --dart-define=AGRIMIND_MOBILE_MQTT_ACK_PASSWORD=LOCAL_ACK_SECRET
 ```
 
 Select an Android or iOS target supported by the host development environment.
 Never put real values in this README, tracked files, shell history, or CI logs.
-The mobile MQTT password is supplied locally for the TecWeek build only; it is
+The mobile MQTT passwords are supplied locally for the TecWeek build only; they are
 extractable from a distributed app and is not a production secret-delivery
 design. Never pass a service-role key, database password, JWT secret, edge
 credential, ingestion credential, or other privileged value to Flutter.
@@ -48,6 +52,7 @@ lib/
 │   └── widgets/         # Shared accessible UI primitives
 ├── features/auth/       # Auth domain, application port, Supabase adapter, UI
 ├── features/dashboard/  # Device lookup, MQTT adapter, live state and UI
+├── features/irrigation/ # Manual command/ACK state, MQTT ports/adapters and UX
 ├── features/onboarding/ # One-farm state, repository, Supabase RPC adapter, UI
 └── main.dart            # Application entry point
 test/                    # Offline unit and widget tests
@@ -85,8 +90,10 @@ broker, Supabase project, Raspberry Pi, GPIO, or Internet connection.
 
 ## Configuration and security
 
-`AppConfig` contains the public Supabase values and narrow AGM-017 mobile MQTT
-settings. It requires TLS port 8883 and never logs its contents.
+`AppConfig` contains the public Supabase values and narrow AGM-017/018 mobile
+MQTT settings. It requires TLS port 8883 and never logs its contents. The MVP
+uses separate telemetry-subscribe, command-publish, and ACK-subscribe broker
+credentials; none grants broad device-subtree access.
 `supabase_flutter` owns persisted user-session storage and token refresh; the
 application does not create a second token store. Startup remains on a neutral
 loading screen until restoration completes, and all known application routes

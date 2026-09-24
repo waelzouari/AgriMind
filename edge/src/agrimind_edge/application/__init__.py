@@ -1,8 +1,10 @@
 """Application services and hardware-independent ports."""
 
+from agrimind_edge.application.inference_ports import IrrigationModelPort
 from agrimind_edge.application.ingestion_acknowledgements import (
     IngestionAcknowledgementProcessor,
 )
+from agrimind_edge.application.irrigation_inference import IrrigationInferenceService
 from agrimind_edge.application.mqtt_acl import DeviceAclPolicy
 from agrimind_edge.application.mqtt_commands import (
     MqttAcknowledgementPublisher,
@@ -33,6 +35,8 @@ __all__ = [
     "FailoverEventPublisher",
     "FailoverMqttTransport",
     "IngestionAcknowledgementProcessor",
+    "IrrigationInferenceService",
+    "IrrigationModelPort",
     "MqttAcknowledgementPublisher",
     "MqttPumpCommandProcessor",
     "OutboxService",

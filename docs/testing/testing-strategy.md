@@ -101,6 +101,9 @@ fakes. Ordinary CI never connects to HiveMQ or requires physical hardware.
 - Deterministic preprocessing and seeded splits; prefer group/time split when
   repeated measurements would leak across random rows.
 - Logistic-regression or rule baseline before more complex models.
+- Local irrigation inference: exact snapshot-to-V1 feature order, input
+  quality/unit/range/freshness, threshold boundaries, deterministic portable
+  artifact loading, integrity/version failures, and Joblib/JSON export parity.
 - Report precision, recall, F1, PR-AUC/ROC-AUC as appropriate, confusion matrix,
   calibration, and latency on Raspberry Pi. Never invent thresholds or scores.
 - Version feature schema, preprocessing pipeline, model artifact, dataset

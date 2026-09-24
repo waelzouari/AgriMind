@@ -132,6 +132,17 @@ class PersistenceConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class InferenceConfig:
+    """Freshness policy for advisory local irrigation inference."""
+
+    max_age_seconds: int = 30
+
+    def __post_init__(self) -> None:
+        if not 1 <= self.max_age_seconds <= 3_600:
+            raise ValueError("inference maximum age must be between 1 and 3600 seconds")
+
+
+@dataclass(frozen=True, slots=True)
 class SchedulerConfig:
     """Fail-safe local one-shot scheduler policy."""
 
@@ -161,6 +172,7 @@ class RuntimeConfig:
     local_mqtt: MqttConfig | None = None
     local_credentials: MqttCredentials | None = field(default=None, repr=False)
     failover: FailoverPolicy = field(default_factory=FailoverPolicy)
+    inference: InferenceConfig = field(default_factory=InferenceConfig)
 
     def __repr__(self) -> str:
         return (
@@ -168,7 +180,7 @@ class RuntimeConfig:
             f"credentials={self.credentials!r}, hardware={self.hardware!r}, "
             f"persistence={self.persistence!r}, local_mqtt={self.local_mqtt!r}, "
             f"local_credentials={self.local_credentials!r}, failover={self.failover!r}, "
-            f"scheduler={self.scheduler!r})"
+            f"scheduler={self.scheduler!r}, inference={self.inference!r})"
         )
 
     @classmethod
@@ -269,4 +281,11 @@ class RuntimeConfig:
             local_mqtt=local_mqtt,
             local_credentials=local_credentials,
             failover=failover,
+            inference=InferenceConfig(
+                max_age_seconds=_integer(
+                    environment,
+                    "AGRIMIND_IRRIGATION_INFERENCE_MAX_AGE_SECONDS",
+                    30,
+                )
+            ),
         )

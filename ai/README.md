@@ -13,7 +13,13 @@ fixtures and does not claim to validate the real workbook. See
 AGM-022 adds a deterministic, validation-selected irrigation baseline and its
 dataset-specific evaluation. The methodology and measured limitations are in
 [`docs/ai/irrigation-baseline.md`](../docs/ai/irrigation-baseline.md). Generated
-model artifacts remain ignored and are not a runtime inference interface.
+Joblib model artifacts remain ignored and are not a runtime inference interface.
+
+AGM-023 exports the trusted selected tree into a deterministic, reviewable JSON
+artifact packaged by the edge. Joblib remains ignored and is used only as local
+training evidence and an export/parity source. Runtime behavior and failure
+semantics are documented in
+[`docs/ai/irrigation-inference.md`](../docs/ai/irrigation-inference.md).
 
 Tank level, pump status, and sensor status are system state and are excluded
 from agronomic ML features. Computer vision is limited to `NORMAL` and

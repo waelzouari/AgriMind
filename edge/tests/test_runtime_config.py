@@ -39,6 +39,7 @@ def test_runtime_configuration_is_validated_and_composes_hardware() -> None:
     assert config.scheduler.enabled is False
     assert config.scheduler.poll_interval_seconds == 5
     assert config.scheduler.max_lateness_seconds == 30
+    assert config.inference.max_age_seconds == 30
 
 
 def test_runtime_configuration_repr_redacts_secrets() -> None:
@@ -67,6 +68,8 @@ def test_runtime_configuration_repr_redacts_secrets() -> None:
         ("AGRIMIND_PUMP_MAX_DURATION_SECONDS", "0", "between 1 and 600"),
         ("AGRIMIND_PUMP_MAX_DURATION_SECONDS", "601", "between 1 and 600"),
         ("AGRIMIND_SQLITE_PATH", "relative/edge.sqlite3", "absolute path"),
+        ("AGRIMIND_IRRIGATION_INFERENCE_MAX_AGE_SECONDS", "0", "between 1 and 3600"),
+        ("AGRIMIND_IRRIGATION_INFERENCE_MAX_AGE_SECONDS", "3601", "between 1 and 3600"),
         ("AGRIMIND_SCHEDULER_ENABLED", "yes", "must be true or false"),
         ("AGRIMIND_SCHEDULER_POLL_INTERVAL_SECONDS", "0.49", "between 0.5 and 60"),
         ("AGRIMIND_SCHEDULER_POLL_INTERVAL_SECONDS", "61", "between 0.5 and 60"),

@@ -1,0 +1,69 @@
+{
+  "artifact_version": "v1",
+  "dataset_sha256": "F776F34FC9C7BE1EEF59614DC41DDEADEF6FDE9DC11D908C4EC8A513D6AF4D2D",
+  "decision_threshold": 0.02040816326530612,
+  "feature_contract_version": "v1",
+  "format": "agrimind-decision-tree-v1",
+  "methodology_version": "baseline-v1",
+  "model_class": "DecisionTreeClassifier",
+  "model_version": "irrigation-baseline-v1",
+  "ordered_features": [
+    "soil_moisture_index_0_100",
+    "air_temperature_c",
+    "air_relative_humidity_percent"
+  ],
+  "target_classes": [
+    0,
+    1
+  ],
+  "tree": {
+    "node_count": 7,
+    "nodes": [
+      {
+        "feature_index": 0,
+        "id": 0,
+        "kind": "split",
+        "left": 1,
+        "right": 4,
+        "threshold": 49.5
+      },
+      {
+        "feature_index": 0,
+        "id": 1,
+        "kind": "split",
+        "left": 2,
+        "right": 3,
+        "threshold": 44.0
+      },
+      {
+        "id": 2,
+        "kind": "leaf",
+        "positive_score": 0.02040816326530612
+      },
+      {
+        "id": 3,
+        "kind": "leaf",
+        "positive_score": 0.94
+      },
+      {
+        "feature_index": 1,
+        "id": 4,
+        "kind": "split",
+        "left": 5,
+        "right": 6,
+        "threshold": 23.5
+      },
+      {
+        "id": 5,
+        "kind": "leaf",
+        "positive_score": 0.0028694404591104736
+      },
+      {
+        "id": 6,
+        "kind": "leaf",
+        "positive_score": 0.5806451612903226
+      }
+    ],
+    "root_node": 0
+  }
+}

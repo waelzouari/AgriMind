@@ -224,6 +224,15 @@ not exactly-once delivery.
   access when image storage is actually required; inference input type, size,
   and decode limits remain mandatory then.
 
+AGM-019 provisionally stores nullable paired farm coordinates and one current
+Open-Meteo snapshot per farm in PostgreSQL. A trusted weather worker performs
+one provider attempt per refresh, uses UTC rolling hourly windows, and exposes
+the snapshot to farm members through RLS. Fresh (30 minutes), stale-usable (up
+to 6 hours), and refresh-loop (15 minutes) defaults are TecWeek MVP policy
+subject to later architecture/product review. This informative cloud path does
+not publish commands or participate in physical actuation; the edge safety gate
+remains authoritative.
+
 ## Architecture decisions to record during implementation
 
 - ADR-001 monorepo and boundary model.

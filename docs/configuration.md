@@ -103,3 +103,23 @@ AGM-012 has a separate server-only configuration surface under
 These values belong in the ingestion deployment secret store or an ignored
 server-local environment file. The service-role variable must never be copied
 to the repository-root edge/mobile environment, Flutter, or Raspberry Pi.
+
+## Weather aggregation server
+
+AGM-019 has a separate trusted runtime surface under
+`backend/services/weather/.env.example`. The policy is provisional for the
+TecWeek MVP and subject to architecture/product review.
+
+| Variable | Rule |
+|---|---|
+| `AGRIMIND_WEATHER_SUPABASE_URL` | required HTTPS Supabase origin |
+| `AGRIMIND_WEATHER_SUPABASE_SERVICE_ROLE_KEY` | required server-only secret |
+| `AGRIMIND_OPEN_METEO_BASE_URL` | HTTPS URL; defaults to `https://api.open-meteo.com/v1/forecast` |
+| `AGRIMIND_WEATHER_HTTP_TIMEOUT_SECONDS` | positive number; default 5 |
+| `AGRIMIND_WEATHER_FRESH_TTL_SECONDS` | positive number; default 1800 |
+| `AGRIMIND_WEATHER_MAX_STALE_SECONDS` | greater than fresh TTL; default 21600 |
+| `AGRIMIND_WEATHER_REFRESH_INTERVAL_SECONDS` | positive number; default 900 |
+
+The standard public Open-Meteo endpoint requires no API key. The Supabase
+service-role value belongs only in the weather deployment secret store and is
+never a mobile or edge variable.

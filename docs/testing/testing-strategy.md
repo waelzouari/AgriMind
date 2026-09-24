@@ -63,6 +63,10 @@ recovery receive the same attention as happy paths.
   invalidation, and PostgreSQL integration tests for coordinate constraints,
   grants, RLS, service writes, and cross-farm isolation. A live Open-Meteo
   smoke test is optional and never required by ordinary CI.
+- Farm Manager: clean-migration tree constraints, per-farm position uniqueness,
+  owner/member/anonymous/non-member RLS, cross-farm mutation attempts, empty
+  farms, deterministic grid ordering, strict Supabase row mapping, and a
+  mockable Flutter repository. Test fixtures never seed production farms.
 
 ### Flutter
 

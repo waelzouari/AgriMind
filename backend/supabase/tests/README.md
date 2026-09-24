@@ -22,3 +22,9 @@ identity derivation, name normalization, atomic farm/owner creation, retry
 idempotence, cross-farm isolation, and continued denial of direct writes. It
 also runs two overlapping PostgreSQL sessions for the same user and verifies
 that the transaction advisory lock yields one farm and one owner membership.
+
+Finally, the harness applies AGM-019 and AGM-028. It validates weather
+constraints and isolation, then validates tree identity/position constraints,
+deterministic ordering, empty farms, owner mutation rights, member read-only
+access, anonymous denial, and cross-farm isolation. Farm Manager fixtures are
+test-only and never seed production farms.

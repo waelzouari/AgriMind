@@ -6,10 +6,12 @@ ingestion remains AGM-012 work.
 
 ```text
 auth.users ──< farm_memberships >── farms ──< devices
-                                              ├── telemetry_readings
-                                              ├── device_status_events
-                                              ├── command_acknowledgements
-                                              └── irrigation_results
+                                      │       ├── telemetry_readings
+                                      │       ├── device_status_events
+                                      │       ├── command_acknowledgements
+                                      │       └── irrigation_results
+                                      ├── weather_snapshots
+                                      └── trees
 ```
 
 Memberships support multiple users per farm and multiple farms per user. Event
@@ -78,6 +80,36 @@ private bucket through a versioned migration, use farm-scoped object paths such
 as `{farm_id}/inspections/{asset_id}`, and test the same cross-farm isolation
 before exposing uploads or signed reads. No public bucket is currently part of
 the architecture.
+
+## Farm Manager tree inventory
+
+AGM-028 adds `trees` as the minimal farm-scoped inventory required by the Farm
+Manager. A tree has a generated or caller-supplied non-zero UUID as its stable
+technical identity, a mutable user-facing `label`, and a one-based
+`grid_row`/`grid_column` position. Rows 1 through 26 render as A through Z;
+columns range from 1 through 99. `(farm_id, grid_row, grid_column)` is unique,
+so A1 may exist once in each farm but never twice in the same farm. Queries use
+`grid_row`, `grid_column`, then UUID ordering to produce a deterministic grid.
+
+Farm members may read their farm's tree inventory. Only farm owners may insert,
+update, move, or delete trees. Anonymous and non-member access is denied, and
+both sides of an update are checked to prevent moving a tree into an
+unauthorized farm. The `service_role` boundary remains trusted server-side and
+is never exposed to Flutter.
+
+The schema deliberately contains no health, attention, anomaly, disease,
+inspection, soil-moisture, or irrigation columns. Current telemetry and
+irrigation events are device/farm scoped, not tree scoped. Future Computer
+Vision tickets own `NORMAL` versus `VISUAL_ANOMALY_DETECTED`; disease diagnosis
+is not part of the MVP. Consequently the AGM-028 read model derives only
+`totalTrees`, rather than storing denormalized summary counters or pretending
+that health data exists.
+
+AGM-029 can consume `FarmManagerRepository.listTrees`, `getTree`, and
+`getFarmSummary` to build the ordered My Farm grid, empty state, and basic Tree
+Detail identity/position view. Unsupported telemetry, irrigation, activity,
+inspection, and anomaly sections must remain clearly unavailable until their
+own data relationships are implemented.
 
 ## Trusted device ingestion
 

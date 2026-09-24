@@ -125,4 +125,69 @@ MIGRATIONS: tuple[str, ...] = (
     CREATE INDEX idx_irrigation_occurrences_status
         ON irrigation_schedule_occurrences(status, claimed_at, occurrence_id);
     """,
+    """
+    ALTER TABLE outbox RENAME TO outbox_agm025;
+    DROP INDEX idx_outbox_pending_order;
+    ALTER TABLE edge_events RENAME TO edge_events_agm025;
+    DROP INDEX idx_edge_events_age;
+    DROP INDEX idx_edge_events_identity_age;
+
+    CREATE TABLE edge_events (
+        event_id TEXT PRIMARY KEY,
+        event_type TEXT NOT NULL CHECK (
+            event_type IN (
+                'telemetry', 'command_acknowledgement', 'irrigation_result'
+            )
+        ),
+        farm_id TEXT NOT NULL,
+        device_id TEXT NOT NULL,
+        occurred_at TEXT NOT NULL,
+        payload TEXT NOT NULL CHECK (json_valid(payload)),
+        created_at TEXT NOT NULL
+    );
+
+    CREATE TABLE outbox (
+        event_id TEXT PRIMARY KEY REFERENCES edge_events(event_id) ON DELETE CASCADE,
+        topic TEXT NOT NULL,
+        payload TEXT NOT NULL CHECK (json_valid(payload)),
+        qos INTEGER NOT NULL CHECK (qos IN (0, 1, 2)),
+        retain INTEGER NOT NULL CHECK (retain IN (0, 1)),
+        state TEXT NOT NULL CHECK (
+            state IN ('pending', 'broker_accepted', 'cloud_confirmed', 'rejected', 'delivered')
+        ),
+        attempt_count INTEGER NOT NULL DEFAULT 0 CHECK (attempt_count >= 0),
+        last_attempt_at TEXT,
+        broker_accepted_at TEXT,
+        cloud_acknowledged_at TEXT,
+        rejection_reason TEXT,
+        created_at TEXT NOT NULL
+    );
+
+    INSERT INTO edge_events
+    SELECT * FROM edge_events_agm025;
+
+    INSERT INTO outbox(
+        event_id, topic, payload, qos, retain, state, attempt_count,
+        last_attempt_at, broker_accepted_at, cloud_acknowledged_at,
+        rejection_reason, created_at
+    )
+    SELECT event_id, topic, payload, qos, retain,
+           CASE
+             WHEN state = 'delivered' THEN 'broker_accepted'
+             ELSE state
+           END,
+           attempt_count, last_attempt_at, broker_accepted_at,
+           cloud_acknowledged_at, rejection_reason, created_at
+    FROM outbox_agm025;
+
+    DROP TABLE outbox_agm025;
+    DROP TABLE edge_events_agm025;
+
+    CREATE INDEX idx_edge_events_age
+        ON edge_events(occurred_at, event_id);
+    CREATE INDEX idx_edge_events_identity_age
+        ON edge_events(farm_id, device_id, occurred_at, event_id);
+    CREATE INDEX idx_outbox_pending_order
+        ON outbox(state, created_at, event_id);
+    """,
 )

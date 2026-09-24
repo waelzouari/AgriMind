@@ -45,6 +45,8 @@ class IngestionService:
                 raise ContractViolation("invalid_qos")
             if identity.kind is MessageKind.TELEMETRY and retain:
                 raise ContractViolation("retained_telemetry")
+            if identity.kind not in {MessageKind.TELEMETRY, MessageKind.DEVICE_STATUS} and retain:
+                raise ContractViolation("retained_event")
             now = self._now()
             if message.recorded_at < now - self._maximum_age:
                 raise ContractViolation("stale_message")
@@ -61,8 +63,12 @@ class IngestionService:
 
             if identity.kind is MessageKind.TELEMETRY:
                 outcome = self._persistence.ingest_telemetry(message.payload)
-            else:
+            elif identity.kind is MessageKind.DEVICE_STATUS:
                 outcome = self._persistence.ingest_device_status(message.payload)
+            elif identity.kind is MessageKind.COMMAND_ACKNOWLEDGEMENT:
+                outcome = self._persistence.ingest_command_acknowledgement(message.payload)
+            else:
+                outcome = self._persistence.ingest_irrigation_result(message.payload)
             result = IngestionResult(
                 IngestionOutcome(outcome),
                 outcome,

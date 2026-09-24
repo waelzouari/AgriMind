@@ -44,6 +44,8 @@ class FakePersistence:
     def __init__(self) -> None:
         self.telemetry: list[dict[str, Any]] = []
         self.statuses: list[dict[str, Any]] = []
+        self.acknowledgements: list[dict[str, Any]] = []
+        self.irrigation_results: list[dict[str, Any]] = []
         self.failure: Exception | None = None
         self.outcome = "inserted"
 
@@ -57,4 +59,16 @@ class FakePersistence:
         if self.failure:
             raise self.failure
         self.statuses.append(payload)
+        return self.outcome
+
+    def ingest_command_acknowledgement(self, payload: dict[str, Any]) -> str:
+        if self.failure:
+            raise self.failure
+        self.acknowledgements.append(payload)
+        return self.outcome
+
+    def ingest_irrigation_result(self, payload: dict[str, Any]) -> str:
+        if self.failure:
+            raise self.failure
+        self.irrigation_results.append(payload)
         return self.outcome

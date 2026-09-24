@@ -12,6 +12,8 @@ from uuid import UUID
 class MessageKind(StrEnum):
     TELEMETRY = "telemetry"
     DEVICE_STATUS = "device_status"
+    COMMAND_ACKNOWLEDGEMENT = "command_acknowledgement"
+    IRRIGATION_RESULT = "irrigation_result"
 
 
 class IngestionOutcome(StrEnum):
@@ -41,6 +43,7 @@ class TopicIdentity:
     farm_id: UUID
     device_id: UUID
     metric: str | None = None
+    command_id: UUID | None = None
 
 
 @dataclass(frozen=True, slots=True)
@@ -65,13 +68,24 @@ class IngestionResult:
         return self.outcome is not IngestionOutcome.RETRYABLE
 
     @property
-    def correlatable_telemetry(self) -> bool:
+    def correlatable_event(self) -> bool:
         return (
-            self.message_kind is MessageKind.TELEMETRY
+            self.message_kind
+            in {
+                MessageKind.TELEMETRY,
+                MessageKind.COMMAND_ACKNOWLEDGEMENT,
+                MessageKind.IRRIGATION_RESULT,
+            }
             and self.message_id is not None
             and self.farm_id is not None
             and self.device_id is not None
         )
+
+    @property
+    def correlatable_telemetry(self) -> bool:
+        """Backward-compatible telemetry-only correlation predicate."""
+
+        return self.message_kind is MessageKind.TELEMETRY and self.correlatable_event
 
 
 @dataclass(frozen=True, slots=True)

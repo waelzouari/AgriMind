@@ -37,6 +37,7 @@ class PumpCommandHandler:
         clock: Callable[[], datetime] | None = None,
         acknowledgement_id_factory: Callable[[], UUID] | None = None,
         acknowledgement_sink: AcknowledgementSink | None = None,
+        lifecycle_sink: AcknowledgementSink | None = None,
         processed_command_store: ProcessedCommandStore | None = None,
         logger: logging.Logger | None = None,
     ) -> None:
@@ -45,6 +46,7 @@ class PumpCommandHandler:
         self._clock = clock or (lambda: datetime.now(UTC))
         self._acknowledgement_id_factory = acknowledgement_id_factory or uuid4
         self._acknowledgement_sink = acknowledgement_sink or (lambda acknowledgement: None)
+        self._lifecycle_sink = lifecycle_sink or (lambda acknowledgement: None)
         self._processed_command_store = processed_command_store
         self._logger = logger or logging.getLogger(__name__)
         self._outcomes: dict[UUID, tuple[PumpCommand, CommandAcknowledgement]] = {}
@@ -204,7 +206,7 @@ class PumpCommandHandler:
         pump_state: bool | None,
         reason: PumpDecisionCode | None = None,
     ) -> CommandAcknowledgement:
-        return CommandAcknowledgement(
+        acknowledgement = CommandAcknowledgement(
             acknowledgement_id=self._acknowledgement_id_factory(),
             command_id=command.command_id,
             farm_id=self._config.farm_id,
@@ -214,6 +216,19 @@ class PumpCommandHandler:
             reason_code=reason.value if reason is not None else None,
             pump_state=pump_state,
         )
+        try:
+            self._lifecycle_sink(acknowledgement)
+        except Exception:
+            self._logger.error(
+                "command_acknowledgement_not_recorded",
+                extra={
+                    "event": "command_acknowledgement_not_recorded",
+                    "acknowledgement_id": str(acknowledgement.acknowledgement_id),
+                    "command_id": str(command.command_id),
+                    "status": status.value,
+                },
+            )
+        return acknowledgement
 
     def _now(self) -> datetime:
         now = self._clock()

@@ -520,6 +520,14 @@ Example on `.../events/irrigation_result`:
 This represents VERIFY output only. AGM-003 does not start the pump, wait for
 infiltration, classify sensor noise, or persist the event.
 
+AGM-025 persists this contract only when real, valid before and after
+measurements already exist. It never derives an agronomic result from an
+`accepted` or `completed` command ACK and introduces no arbitrary infiltration
+delay. Technical execution remains represented by the existing command ACK
+contract. For both durable types, PUBACK means only broker acceptance; trusted
+Cloud ingestion must return a correlated application receipt before the Edge
+marks the event `cloud_confirmed`.
+
 ## Evolution rules
 
 - Consumers reject unsupported `schema_version` and topic version.

@@ -64,6 +64,35 @@ def test_ingestion_adapter_calls_only_the_restricted_rpcs() -> None:
     assert repository.ingest_telemetry(telemetry) == "inserted"
     assert client.calls[0][1] == "rpc/ingest_telemetry"
 
+    acknowledgement = {
+        "schema_version": 1,
+        "acknowledgement_id": str(UUID(int=4)),
+        "command_id": str(UUID(int=5)),
+        "farm_id": str(FARM),
+        "device_id": str(DEVICE),
+        "status": "completed",
+        "occurred_at": "2026-09-23T12:01:00Z",
+        "pump_state": False,
+    }
+    result = {
+        "schema_version": 1,
+        "event_id": str(UUID(int=6)),
+        "farm_id": str(FARM),
+        "device_id": str(DEVICE),
+        "soil_moisture_before": 40,
+        "soil_moisture_after": 45,
+        "delta": 5,
+        "result": "increased",
+        "completed_at": "2026-09-23T12:05:00Z",
+    }
+    assert repository.ingest_command_acknowledgement(acknowledgement) == "inserted"
+    assert repository.ingest_irrigation_result(result) == "inserted"
+    assert [call[1] for call in client.calls] == [
+        "rpc/ingest_telemetry",
+        "rpc/ingest_command_acknowledgement",
+        "rpc/ingest_irrigation_result",
+    ]
+
 
 def test_supabase_client_repr_redacts_service_role() -> None:
     secret = "service-role-must-not-leak"  # pragma: allowlist secret

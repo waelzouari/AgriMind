@@ -204,6 +204,38 @@ class SupabaseIngestionRepository(TrustedIngestionPort):
             },
         )
 
+    def ingest_command_acknowledgement(self, payload: dict[str, Any]) -> str:
+        return self._rpc(
+            "ingest_command_acknowledgement",
+            {
+                "incoming_acknowledgement_id": payload["acknowledgement_id"],
+                "incoming_command_id": payload["command_id"],
+                "incoming_farm_id": payload["farm_id"],
+                "incoming_device_id": payload["device_id"],
+                "incoming_schema_version": payload["schema_version"],
+                "incoming_status": payload["status"],
+                "incoming_occurred_at": payload["occurred_at"],
+                "incoming_reason_code": payload.get("reason_code"),
+                "incoming_pump_state": payload.get("pump_state"),
+            },
+        )
+
+    def ingest_irrigation_result(self, payload: dict[str, Any]) -> str:
+        return self._rpc(
+            "ingest_irrigation_result",
+            {
+                "incoming_event_id": payload["event_id"],
+                "incoming_farm_id": payload["farm_id"],
+                "incoming_device_id": payload["device_id"],
+                "incoming_schema_version": payload["schema_version"],
+                "incoming_soil_moisture_before": payload["soil_moisture_before"],
+                "incoming_soil_moisture_after": payload["soil_moisture_after"],
+                "incoming_delta": payload["delta"],
+                "incoming_result": payload["result"],
+                "incoming_completed_at": payload["completed_at"],
+            },
+        )
+
     def _rpc(self, name: str, arguments: dict[str, Any]) -> str:
         result = self._client.request("POST", f"rpc/{name}", body=arguments)
         if result not in {"inserted", "duplicate"}:

@@ -58,6 +58,7 @@ class Harness:
         self.scheduler = scheduler or FakeScheduler()
         self.controller = SafePumpController(self.pump, self.scheduler)
         self.emitted: list[CommandAcknowledgement] = []
+        self.lifecycle: list[CommandAcknowledgement] = []
         identifiers = count(100)
         self.handler = PumpCommandHandler(
             self.controller,
@@ -65,6 +66,7 @@ class Harness:
             clock=lambda: NOW,
             acknowledgement_id_factory=lambda: UUID(int=next(identifiers)),
             acknowledgement_sink=self.emitted.append,
+            lifecycle_sink=self.lifecycle.append,
             logger=logger,
         )
 
@@ -97,6 +99,31 @@ def test_automatic_stop_transitions_off_and_emits_completed_ack() -> None:
     assert harness.emitted[0].command_id == on_command.command_id
     assert harness.emitted[0].status is AcknowledgementStatus.COMPLETED
     assert harness.emitted[0].pump_state is False
+    assert [item.status for item in harness.lifecycle] == [
+        AcknowledgementStatus.ACCEPTED,
+        AcknowledgementStatus.COMPLETED,
+    ]
+    assert {item.command_id for item in harness.lifecycle} == {on_command.command_id}
+
+
+def test_lifecycle_observer_failure_does_not_redefine_pump_safety() -> None:
+    pump = FakePump()
+    scheduler = FakeScheduler()
+
+    def unavailable(_acknowledgement: CommandAcknowledgement) -> None:
+        raise RuntimeError("audit unavailable")
+
+    handler = PumpCommandHandler(
+        SafePumpController(pump, scheduler),
+        PumpSafetyConfig(FARM_ID, DEVICE_ID, 120),
+        clock=lambda: NOW,
+        lifecycle_sink=unavailable,
+    )
+
+    acknowledgement = handler.handle(command(PumpAction.ON, duration_seconds=30))
+
+    assert acknowledgement.status is AcknowledgementStatus.ACCEPTED
+    assert pump.active is True
 
 
 def test_off_stops_running_pump_and_cancels_timer() -> None:
@@ -133,6 +160,8 @@ def test_duplicate_on_replays_outcome_without_actuating_or_rescheduling() -> Non
     second = harness.handler.handle(on_command)
 
     assert second is first
+    assert second.acknowledgement_id == first.acknowledgement_id
+    assert harness.lifecycle == [first]
     assert harness.pump.calls.count("turn_on") == 1
     assert len(harness.scheduler.calls) == 1
 
@@ -254,6 +283,7 @@ def test_duration_above_local_policy_is_rejected_not_clamped() -> None:
 
     assert acknowledgement.status is AcknowledgementStatus.REJECTED
     assert acknowledgement.reason_code == "duration_exceeds_local_limit"
+    assert harness.lifecycle == [acknowledgement]
     assert harness.pump.calls == []
     assert harness.scheduler.calls == []
 
@@ -304,6 +334,7 @@ def test_on_actuator_failure_attempts_safe_off_and_returns_failed() -> None:
     assert acknowledgement.status is AcknowledgementStatus.FAILED
     assert acknowledgement.reason_code == "pump_actuation_failed"
     assert acknowledgement.pump_state is False
+    assert harness.lifecycle == [acknowledgement]
     assert harness.controller.state is PumpState.OFF
     assert pump.calls.count("turn_on") == 1
     assert pump.calls.count("turn_off") == 1
@@ -335,6 +366,10 @@ def test_automatic_stop_failure_recovers_off_and_emits_failed() -> None:
     assert harness.emitted[0].status is AcknowledgementStatus.FAILED
     assert harness.emitted[0].reason_code == "pump_actuation_failed"
     assert harness.emitted[0].pump_state is False
+    assert [item.status for item in harness.lifecycle] == [
+        AcknowledgementStatus.ACCEPTED,
+        AcknowledgementStatus.FAILED,
+    ]
 
 
 def test_unrecoverable_automatic_stop_enters_fault_without_false_safe_claim() -> None:

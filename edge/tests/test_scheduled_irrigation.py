@@ -225,6 +225,7 @@ def test_schedule_survives_reopen_and_current_schema_migrates(tmp_path: Path) ->
         (1,),
         (2,),
         (3,),
+        (4,),
     ]
     connection.close()
 
@@ -239,7 +240,7 @@ def test_migration_is_idempotent_across_repeated_initialization(tmp_path: Path) 
     versions = connection.execute(
         "SELECT version, COUNT(*) FROM schema_migrations GROUP BY version ORDER BY version"
     ).fetchall()
-    assert versions == [(1, 1), (2, 1), (3, 1)]
+    assert versions == [(1, 1), (2, 1), (3, 1), (4, 1)]
     connection.close()
 
 

@@ -106,14 +106,15 @@ threshold. No periodic AI loop or cadence is created.
 
 ## Local event store and outbox (AGM-008)
 
-SQLite stores only canonical `Telemetry` and `CommandAcknowledgement` events,
-with their exact MQTT publication metadata. Event insertion and pending-outbox
-creation are one transaction. Device status/LWT, inbound commands,
-`SensorSnapshot`, and future irrigation results are deliberately excluded.
+SQLite stores canonical `Telemetry`, `CommandAcknowledgement`, and validated
+`IrrigationResult` events with their exact MQTT publication metadata. Event
+insertion and pending-outbox creation are one transaction. Device status/LWT,
+inbound commands, and `SensorSnapshot` are deliberately excluded. AGM-025 uses
+this same database and outbox rather than adding another retry queue.
 
 Pending rows are replayed deterministically by contract occurrence time and
-event ID. A QoS 1 PUBACK moves telemetry only to `broker_accepted`; it does not
-prove Cloud persistence. AGM-013 keeps that telemetry replayable until a
+event ID. A QoS 1 PUBACK moves durable events only to `broker_accepted`; it does
+not prove Cloud persistence. AGM-013/025 keep them replayable until a
 validated application receipt moves it to `cloud_confirmed` or `rejected`.
 Replay is at-least-once, so consumers deduplicate by stable identity.
 
@@ -122,6 +123,12 @@ All pending and terminal events are removed when their contract timestamp is
 SQLite is unavailable, connected MQTT receives one best-effort direct publish
 with an explicit loss-of-durability log; if MQTT is unavailable too, the loss
 is logged without payload data and local sensor/pump safety continues.
+
+AGM-025 keeps command lifecycle and agronomic verification separate. An
+`accepted` ACK is not completion. A `completed` ACK is a technical stop observed
+by AGM-005, not proof of delivered volume, improved moisture, or crop outcome.
+`IrrigationResult` V1 is published only when real valid before and after soil
+measurements are supplied; no measurement or infiltration delay is invented.
 
 The same database holds a narrow processed-command register. It stores the
 command fingerprint and latest ACK, never a replayable inbound command. An

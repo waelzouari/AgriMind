@@ -429,7 +429,7 @@ class SqliteEventOutboxStore:
                     raise PersistenceError("pending outbox event was not found")
                 if event["state"] in {"cloud_confirmed", "rejected", "delivered"}:
                     return
-                state = "broker_accepted" if event["event_type"] == "telemetry" else "delivered"
+                state = "broker_accepted"
                 with connection:
                     updated = connection.execute(
                         """
@@ -479,7 +479,7 @@ class SqliteEventOutboxStore:
                 if row is None:
                     return False
                 if (
-                    row["event_type"] != "telemetry"
+                    row["event_type"] != acknowledgement.event_type
                     or row["farm_id"] != str(acknowledgement.farm_id)
                     or row["device_id"] != str(acknowledgement.device_id)
                 ):

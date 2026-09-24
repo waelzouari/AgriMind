@@ -43,6 +43,16 @@ def _boolean(environment: Mapping[str, str], name: str, default: bool) -> bool:
     return normalized == "true"
 
 
+def _number(environment: Mapping[str, str], name: str, default: float) -> float:
+    value = environment.get(name)
+    if value is None:
+        return default
+    try:
+        return float(value)
+    except ValueError as error:
+        raise ValueError(f"{name} must be a number") from error
+
+
 @dataclass(frozen=True, slots=True)
 class MqttCredentials:
     """Secrets whose repr never reveals the supplied values."""
@@ -122,12 +132,32 @@ class PersistenceConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class SchedulerConfig:
+    """Fail-safe local one-shot scheduler policy."""
+
+    enabled: bool = False
+    poll_interval_seconds: float = 5.0
+    max_lateness_seconds: int = 30
+
+    def __post_init__(self) -> None:
+        if not 0.5 <= self.poll_interval_seconds <= 60:
+            raise ValueError("scheduler poll interval must be between 0.5 and 60 seconds")
+        if not 0 <= self.max_lateness_seconds <= 300:
+            raise ValueError("schedule maximum lateness must be between 0 and 300 seconds")
+        if self.enabled and self.max_lateness_seconds == 0:
+            raise ValueError("enabled scheduler requires positive maximum lateness")
+        if self.enabled and self.poll_interval_seconds > self.max_lateness_seconds:
+            raise ValueError("enabled scheduler poll interval cannot exceed maximum lateness")
+
+
+@dataclass(frozen=True, slots=True)
 class RuntimeConfig:
     mqtt: MqttConfig
     pump_safety: PumpSafetyConfig
     credentials: MqttCredentials = field(repr=False)
     hardware: HardwareConfig = field(default_factory=HardwareConfig)
     persistence: PersistenceConfig = field(default_factory=PersistenceConfig)
+    scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
     local_mqtt: MqttConfig | None = None
     local_credentials: MqttCredentials | None = field(default=None, repr=False)
     failover: FailoverPolicy = field(default_factory=FailoverPolicy)
@@ -137,7 +167,8 @@ class RuntimeConfig:
             f"RuntimeConfig(mqtt={self.mqtt!r}, pump_safety={self.pump_safety!r}, "
             f"credentials={self.credentials!r}, hardware={self.hardware!r}, "
             f"persistence={self.persistence!r}, local_mqtt={self.local_mqtt!r}, "
-            f"local_credentials={self.local_credentials!r}, failover={self.failover!r})"
+            f"local_credentials={self.local_credentials!r}, failover={self.failover!r}, "
+            f"scheduler={self.scheduler!r})"
         )
 
     @classmethod
@@ -225,6 +256,15 @@ class RuntimeConfig:
                         "AGRIMIND_SQLITE_PATH", "/var/lib/agrimind/edge.sqlite3"
                     ).strip()
                 )
+            ),
+            scheduler=SchedulerConfig(
+                enabled=_boolean(environment, "AGRIMIND_SCHEDULER_ENABLED", False),
+                poll_interval_seconds=_number(
+                    environment, "AGRIMIND_SCHEDULER_POLL_INTERVAL_SECONDS", 5.0
+                ),
+                max_lateness_seconds=_integer(
+                    environment, "AGRIMIND_SCHEDULE_MAX_LATENESS_SECONDS", 30
+                ),
             ),
             local_mqtt=local_mqtt,
             local_credentials=local_credentials,

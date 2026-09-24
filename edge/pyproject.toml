@@ -16,6 +16,7 @@ dependencies = [
 agrimind-mqtt-validate = "agrimind_edge.entrypoints.mqtt_validate:main"
 agrimind-mqtt-control-validate = "agrimind_edge.entrypoints.mqtt_control_validate:main"
 agrimind-offline-sync-validate = "agrimind_edge.entrypoints.offline_sync_validate:main"
+agrimind-schedule = "agrimind_edge.entrypoints.schedule:main"
 
 [project.optional-dependencies]
 hardware = [

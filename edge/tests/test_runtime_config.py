@@ -12,11 +12,12 @@ def _environment() -> dict[str, str]:
         "AGRIMIND_MQTT_HOST": "mqtt.example.invalid",
         "AGRIMIND_MQTT_PORT": "8883",
         "AGRIMIND_MQTT_TLS_ENABLED": "true",
-        "AGRIMIND_MQTT_CA_FILE": "/etc/agrimind/certs/ca.pem",
+        "AGRIMIND_MQTT_CA_FILE": str(Path.cwd() / "test-ca.pem"),
         "AGRIMIND_MQTT_USERNAME": "device-user",  # pragma: allowlist secret
         "AGRIMIND_MQTT_PASSWORD": "device-password",  # pragma: allowlist secret
         "AGRIMIND_TELEMETRY_INTERVAL_SECONDS": "5",
         "AGRIMIND_CONTRACT_VERSION": "v1",
+        "AGRIMIND_SQLITE_PATH": str(Path.cwd() / "edge.sqlite3"),
     }
 
 
@@ -25,7 +26,7 @@ def test_runtime_configuration_is_validated_and_composes_hardware() -> None:
 
     assert config.mqtt.port == 8883
     assert config.mqtt.tls_enabled is True
-    assert config.mqtt.ca_file == Path("/etc/agrimind/certs/ca.pem")
+    assert config.mqtt.ca_file == Path.cwd() / "test-ca.pem"
     assert config.mqtt.contract_version == "v1"
     assert config.mqtt.keepalive_seconds == 60
     assert config.mqtt.reconnect_min_seconds == 1
@@ -34,7 +35,10 @@ def test_runtime_configuration_is_validated_and_composes_hardware() -> None:
     assert config.pump_safety.device_id == config.mqtt.device_id
     assert config.pump_safety.max_duration_seconds == 600
     assert config.hardware.pump_relay_gpio == 18
-    assert config.persistence.database_path == Path("/var/lib/agrimind/edge.sqlite3")
+    assert config.persistence.database_path == Path.cwd() / "edge.sqlite3"
+    assert config.scheduler.enabled is False
+    assert config.scheduler.poll_interval_seconds == 5
+    assert config.scheduler.max_lateness_seconds == 30
 
 
 def test_runtime_configuration_repr_redacts_secrets() -> None:
@@ -63,6 +67,11 @@ def test_runtime_configuration_repr_redacts_secrets() -> None:
         ("AGRIMIND_PUMP_MAX_DURATION_SECONDS", "0", "between 1 and 600"),
         ("AGRIMIND_PUMP_MAX_DURATION_SECONDS", "601", "between 1 and 600"),
         ("AGRIMIND_SQLITE_PATH", "relative/edge.sqlite3", "absolute path"),
+        ("AGRIMIND_SCHEDULER_ENABLED", "yes", "must be true or false"),
+        ("AGRIMIND_SCHEDULER_POLL_INTERVAL_SECONDS", "0.49", "between 0.5 and 60"),
+        ("AGRIMIND_SCHEDULER_POLL_INTERVAL_SECONDS", "61", "between 0.5 and 60"),
+        ("AGRIMIND_SCHEDULE_MAX_LATENESS_SECONDS", "-1", "between 0 and 300"),
+        ("AGRIMIND_SCHEDULE_MAX_LATENESS_SECONDS", "301", "between 0 and 300"),
     ],
 )
 def test_invalid_runtime_configuration_fails_fast(name: str, value: str, message: str) -> None:
@@ -79,6 +88,62 @@ def test_tls_requires_ca_file() -> None:
 
     with pytest.raises(ValueError, match="CA file is required"):
         RuntimeConfig.from_environment(environment)
+
+
+def test_scheduler_configuration_is_explicit_and_cross_field_safe() -> None:
+    environment = _environment()
+    environment.update(
+        {
+            "AGRIMIND_SCHEDULER_ENABLED": "true",
+            "AGRIMIND_SCHEDULER_POLL_INTERVAL_SECONDS": "5",
+            "AGRIMIND_SCHEDULE_MAX_LATENESS_SECONDS": "30",
+        }
+    )
+
+    config = RuntimeConfig.from_environment(environment)
+
+    assert config.scheduler.enabled is True
+    assert config.scheduler.poll_interval_seconds == 5
+    assert config.scheduler.max_lateness_seconds == 30
+
+
+@pytest.mark.parametrize(
+    ("poll", "lateness", "message"),
+    [
+        ("60", "30", "cannot exceed"),
+        ("0.5", "0", "positive maximum lateness"),
+    ],
+)
+def test_enabled_scheduler_rejects_incoherent_polling_window(
+    poll: str, lateness: str, message: str
+) -> None:
+    environment = _environment()
+    environment.update(
+        {
+            "AGRIMIND_SCHEDULER_ENABLED": "true",
+            "AGRIMIND_SCHEDULER_POLL_INTERVAL_SECONDS": poll,
+            "AGRIMIND_SCHEDULE_MAX_LATENESS_SECONDS": lateness,
+        }
+    )
+
+    with pytest.raises(ValueError, match=message):
+        RuntimeConfig.from_environment(environment)
+
+
+def test_disabled_scheduler_allows_zero_lateness_without_actuation_claim() -> None:
+    environment = _environment()
+    environment.update(
+        {
+            "AGRIMIND_SCHEDULER_ENABLED": "false",
+            "AGRIMIND_SCHEDULER_POLL_INTERVAL_SECONDS": "0.5",
+            "AGRIMIND_SCHEDULE_MAX_LATENESS_SECONDS": "0",
+        }
+    )
+
+    config = RuntimeConfig.from_environment(environment)
+
+    assert config.scheduler.enabled is False
+    assert config.scheduler.max_lateness_seconds == 0
 
 
 def test_reconnect_minimum_cannot_exceed_maximum() -> None:

@@ -7,6 +7,7 @@ from agrimind_edge.config.runtime import (
     PersistenceConfig,
     PumpSafetyConfig,
     RuntimeConfig,
+    SchedulerConfig,
 )
 
 __all__ = [
@@ -16,4 +17,5 @@ __all__ = [
     "PersistenceConfig",
     "PumpSafetyConfig",
     "RuntimeConfig",
+    "SchedulerConfig",
 ]

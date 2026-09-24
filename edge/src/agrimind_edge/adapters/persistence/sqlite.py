@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 from threading import RLock
 from uuid import UUID
@@ -23,6 +23,14 @@ from agrimind_edge.domain.persistence import (
     OutboxEntry,
     ProcessedCommandRecord,
     PruneResult,
+)
+from agrimind_edge.domain.schedules import (
+    IrrigationSchedule,
+    OccurrenceStatus,
+    ScheduleOccurrence,
+    ScheduleSummary,
+    command_id_for,
+    occurrence_id_for,
 )
 
 from .migrations import MIGRATIONS
@@ -142,6 +150,237 @@ class SqliteEventOutboxStore:
                 raise
             except sqlite3.DatabaseError as error:
                 raise PersistenceError("SQLite event enqueue failed") from error
+
+    def create_schedule(self, schedule: IrrigationSchedule) -> None:
+        values = (
+            str(schedule.schedule_id),
+            str(schedule.farm_id),
+            str(schedule.device_id),
+            format_utc_timestamp(schedule.scheduled_for, "scheduled_for"),
+            schedule.duration_seconds,
+            int(schedule.enabled),
+            format_utc_timestamp(schedule.created_at, "created_at"),
+            format_utc_timestamp(schedule.updated_at, "updated_at"),
+            format_utc_timestamp(schedule.disabled_at, "disabled_at")
+            if schedule.disabled_at is not None
+            else None,
+        )
+        with self._lock:
+            connection = self._require_connection()
+            try:
+                with connection:
+                    connection.execute(
+                        """
+                        INSERT INTO irrigation_schedules(
+                            schedule_id, farm_id, device_id, scheduled_for,
+                            duration_seconds, enabled, created_at, updated_at, disabled_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        """,
+                        values,
+                    )
+            except sqlite3.IntegrityError as error:
+                raise PersistenceConflict("schedule identity already exists") from error
+            except sqlite3.DatabaseError as error:
+                raise PersistenceError("SQLite schedule creation failed") from error
+
+    def list_schedules(self) -> tuple[ScheduleSummary, ...]:
+        with self._lock:
+            connection = self._require_connection()
+            try:
+                rows = connection.execute(
+                    """
+                    SELECT s.*,
+                           (SELECT o.status FROM irrigation_schedule_occurrences o
+                            WHERE o.schedule_id = s.schedule_id
+                            ORDER BY o.scheduled_for DESC, o.occurrence_id DESC LIMIT 1)
+                           AS occurrence_status
+                    FROM irrigation_schedules s
+                    ORDER BY s.scheduled_for, s.schedule_id
+                    """
+                ).fetchall()
+            except sqlite3.DatabaseError as error:
+                raise PersistenceError("SQLite schedule listing failed") from error
+        return tuple(self._row_to_schedule_summary(row) for row in rows)
+
+    def disable_schedule(self, schedule_id: UUID, disabled_at: datetime) -> bool:
+        timestamp = format_utc_timestamp(disabled_at, "disabled_at")
+        with self._lock:
+            connection = self._require_connection()
+            try:
+                with connection:
+                    result = connection.execute(
+                        """
+                        UPDATE irrigation_schedules
+                        SET enabled = 0, disabled_at = COALESCE(disabled_at, ?), updated_at = ?
+                        WHERE schedule_id = ?
+                        """,
+                        (timestamp, timestamp, str(schedule_id)),
+                    )
+                return result.rowcount == 1
+            except sqlite3.DatabaseError as error:
+                raise PersistenceError("SQLite schedule disable failed") from error
+
+    def claim_due(self, now: datetime, max_lateness: timedelta) -> tuple[ScheduleOccurrence, ...]:
+        timestamp = format_utc_timestamp(now, "now")
+        claimed: list[ScheduleOccurrence] = []
+        with self._lock:
+            connection = self._require_connection()
+            try:
+                connection.execute("BEGIN IMMEDIATE")
+                rows = connection.execute(
+                    """
+                    SELECT * FROM irrigation_schedules s
+                    WHERE enabled = 1 AND scheduled_for <= ?
+                      AND NOT EXISTS (
+                        SELECT 1 FROM irrigation_schedule_occurrences o
+                        WHERE o.schedule_id = s.schedule_id
+                          AND o.scheduled_for = s.scheduled_for
+                      )
+                    ORDER BY scheduled_for, schedule_id
+                    """,
+                    (timestamp,),
+                ).fetchall()
+                for row in rows:
+                    scheduled_for = parse_utc_timestamp(row["scheduled_for"], "scheduled_for")
+                    status = (
+                        OccurrenceStatus.MISSED
+                        if now - scheduled_for > max_lateness
+                        else OccurrenceStatus.CLAIMED
+                    )
+                    occurrence_id = occurrence_id_for(UUID(row["schedule_id"]), scheduled_for)
+                    command_id = command_id_for(occurrence_id)
+                    decision_at = timestamp if status is OccurrenceStatus.MISSED else None
+                    reason_code = "missed_schedule" if status is OccurrenceStatus.MISSED else None
+                    connection.execute(
+                        """
+                        INSERT INTO irrigation_schedule_occurrences(
+                            occurrence_id, schedule_id, farm_id, device_id, scheduled_for,
+                            duration_seconds, claimed_at, decision_at, status, reason_code,
+                            command_id, ack_status, created_at, updated_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?)
+                        """,
+                        (
+                            str(occurrence_id),
+                            row["schedule_id"],
+                            row["farm_id"],
+                            row["device_id"],
+                            row["scheduled_for"],
+                            row["duration_seconds"],
+                            timestamp,
+                            decision_at,
+                            status.value,
+                            reason_code,
+                            str(command_id),
+                            timestamp,
+                            timestamp,
+                        ),
+                    )
+                    connection.execute(
+                        """
+                        UPDATE irrigation_schedules
+                        SET enabled = 0, disabled_at = ?, updated_at = ?
+                        WHERE schedule_id = ? AND enabled = 1
+                        """,
+                        (timestamp, timestamp, row["schedule_id"]),
+                    )
+                    claimed.append(
+                        ScheduleOccurrence(
+                            occurrence_id=occurrence_id,
+                            schedule_id=UUID(row["schedule_id"]),
+                            farm_id=UUID(row["farm_id"]),
+                            device_id=UUID(row["device_id"]),
+                            scheduled_for=scheduled_for,
+                            duration_seconds=row["duration_seconds"],
+                            claimed_at=now,
+                            status=status,
+                            command_id=command_id,
+                            created_at=now,
+                            updated_at=now,
+                            decision_at=now if decision_at else None,
+                            reason_code=reason_code,
+                        )
+                    )
+                connection.commit()
+            except sqlite3.IntegrityError as error:
+                connection.rollback()
+                raise PersistenceError("SQLite schedule claim conflict") from error
+            except sqlite3.DatabaseError as error:
+                connection.rollback()
+                raise PersistenceError("SQLite schedule claim failed") from error
+            except (TypeError, ValueError) as error:
+                connection.rollback()
+                raise PersistenceError("SQLite schedule data is invalid") from error
+        return tuple(claimed)
+
+    def mark_occurrence(
+        self,
+        occurrence_id: UUID,
+        status: OccurrenceStatus,
+        decided_at: datetime,
+        *,
+        reason_code: str | None = None,
+        ack_status: str | None = None,
+    ) -> None:
+        if status is OccurrenceStatus.CLAIMED:
+            raise ValueError("mark_occurrence requires a terminal scheduler decision")
+        timestamp = format_utc_timestamp(decided_at, "decided_at")
+        with self._lock:
+            connection = self._require_connection()
+            try:
+                with connection:
+                    result = connection.execute(
+                        """
+                        UPDATE irrigation_schedule_occurrences
+                        SET status = ?, decision_at = ?, reason_code = ?, ack_status = ?,
+                            updated_at = ?
+                        WHERE occurrence_id = ? AND status = 'claimed'
+                        """,
+                        (
+                            status.value,
+                            timestamp,
+                            reason_code,
+                            ack_status,
+                            timestamp,
+                            str(occurrence_id),
+                        ),
+                    )
+                if result.rowcount != 1:
+                    raise PersistenceConflict("occurrence is missing or already terminal")
+            except PersistenceConflict:
+                raise
+            except sqlite3.DatabaseError as error:
+                raise PersistenceError("SQLite occurrence update failed") from error
+
+    def recover_non_terminal(self, recovered_at: datetime) -> int:
+        timestamp = format_utc_timestamp(recovered_at, "recovered_at")
+        with self._lock:
+            connection = self._require_connection()
+            try:
+                with connection:
+                    result = connection.execute(
+                        """
+                        UPDATE irrigation_schedule_occurrences
+                        SET status = 'unknown_after_restart', decision_at = ?,
+                            reason_code = 'restart_after_claim', updated_at = ?
+                        WHERE status = 'claimed'
+                        """,
+                        (timestamp, timestamp),
+                    )
+                return result.rowcount
+            except sqlite3.DatabaseError as error:
+                raise PersistenceError("SQLite schedule recovery failed") from error
+
+    def get_occurrence(self, occurrence_id: UUID) -> ScheduleOccurrence | None:
+        with self._lock:
+            connection = self._require_connection()
+            try:
+                row = connection.execute(
+                    "SELECT * FROM irrigation_schedule_occurrences WHERE occurrence_id = ?",
+                    (str(occurrence_id),),
+                ).fetchone()
+            except sqlite3.DatabaseError as error:
+                raise PersistenceError("SQLite occurrence read failed") from error
+        return self._row_to_occurrence(row) if row is not None else None
 
     def pending(self, *, limit: int) -> tuple[OutboxEntry, ...]:
         if limit < 1:
@@ -428,4 +667,50 @@ class SqliteEventOutboxStore:
             ),
             attempt_count=row["attempt_count"],
             created_at=parse_utc_timestamp(row["created_at"], "created_at"),
+        )
+
+    @staticmethod
+    def _row_to_schedule_summary(row: sqlite3.Row) -> ScheduleSummary:
+        schedule = IrrigationSchedule(
+            schedule_id=UUID(row["schedule_id"]),
+            farm_id=UUID(row["farm_id"]),
+            device_id=UUID(row["device_id"]),
+            scheduled_for=parse_utc_timestamp(row["scheduled_for"], "scheduled_for"),
+            duration_seconds=row["duration_seconds"],
+            enabled=bool(row["enabled"]),
+            created_at=parse_utc_timestamp(row["created_at"], "created_at"),
+            updated_at=parse_utc_timestamp(row["updated_at"], "updated_at"),
+            disabled_at=(
+                parse_utc_timestamp(row["disabled_at"], "disabled_at")
+                if row["disabled_at"] is not None
+                else None
+            ),
+        )
+        raw_status = row["occurrence_status"]
+        return ScheduleSummary(
+            schedule,
+            OccurrenceStatus(raw_status) if raw_status is not None else None,
+        )
+
+    @staticmethod
+    def _row_to_occurrence(row: sqlite3.Row) -> ScheduleOccurrence:
+        return ScheduleOccurrence(
+            occurrence_id=UUID(row["occurrence_id"]),
+            schedule_id=UUID(row["schedule_id"]),
+            farm_id=UUID(row["farm_id"]),
+            device_id=UUID(row["device_id"]),
+            scheduled_for=parse_utc_timestamp(row["scheduled_for"], "scheduled_for"),
+            duration_seconds=row["duration_seconds"],
+            claimed_at=parse_utc_timestamp(row["claimed_at"], "claimed_at"),
+            decision_at=(
+                parse_utc_timestamp(row["decision_at"], "decision_at")
+                if row["decision_at"] is not None
+                else None
+            ),
+            status=OccurrenceStatus(row["status"]),
+            reason_code=row["reason_code"],
+            command_id=UUID(row["command_id"]),
+            ack_status=row["ack_status"],
+            created_at=parse_utc_timestamp(row["created_at"], "created_at"),
+            updated_at=parse_utc_timestamp(row["updated_at"], "updated_at"),
         )

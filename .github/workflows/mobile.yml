@@ -5,11 +5,15 @@ on:
     branches: [develop, main]
     paths:
       - "mobile/**"
+      - "edge/tests/test_p0_e2e.py"
+      - "docs/testing/p0-e2e-matrix.md"
       - ".github/workflows/mobile.yml"
   push:
     branches: [develop, main]
     paths:
       - "mobile/**"
+      - "edge/tests/test_p0_e2e.py"
+      - "docs/testing/p0-e2e-matrix.md"
       - ".github/workflows/mobile.yml"
 
 permissions:

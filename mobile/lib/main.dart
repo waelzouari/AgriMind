@@ -13,6 +13,8 @@ import 'package:agrimind/features/irrigation/infrastructure/mqtt_command_wire_cl
 import 'package:agrimind/features/irrigation/infrastructure/mqtt_manual_irrigation_repository.dart';
 import 'package:agrimind/features/onboarding/application/farm_controller.dart';
 import 'package:agrimind/features/onboarding/infrastructure/supabase_farm_repository.dart';
+import 'package:agrimind/features/weather/application/weather_controller.dart';
+import 'package:agrimind/features/weather/infrastructure/supabase_weather_repository.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -64,6 +66,11 @@ Future<void> main() async {
             completionGrace: Duration(
               seconds: config.commandCompletionGraceSeconds,
             ),
+          ),
+        ),
+        weatherControllerFactory: () => WeatherController(
+          repository: SupabaseWeatherRepository(
+            SupabaseWeatherRowSource(client),
           ),
         ),
       ),

@@ -11,12 +11,14 @@ class FarmGate extends StatelessWidget {
     required this.authentication,
     required this.farmController,
     required this.dashboardControllerFactory,
+    required this.weatherControllerFactory,
     super.key,
   });
 
   final AuthenticationController authentication;
   final FarmController farmController;
   final DashboardControllerFactory dashboardControllerFactory;
+  final WeatherControllerFactory weatherControllerFactory;
 
   @override
   Widget build(BuildContext context) {
@@ -41,6 +43,7 @@ class FarmGate extends StatelessWidget {
           authentication: authentication,
           farm: farmController.farm!,
           controllerFactory: dashboardControllerFactory,
+          weatherControllerFactory: weatherControllerFactory,
         ),
         FarmStatus.failure => AgriMindScaffold(
           body: Center(

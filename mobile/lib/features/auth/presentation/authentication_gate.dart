@@ -12,12 +12,14 @@ class AuthenticationGate extends StatelessWidget {
     required this.controller,
     required this.farmController,
     required this.dashboardControllerFactory,
+    required this.weatherControllerFactory,
     super.key,
   });
 
   final AuthenticationController controller;
   final FarmController farmController;
   final DashboardControllerFactory dashboardControllerFactory;
+  final WeatherControllerFactory weatherControllerFactory;
 
   @override
   Widget build(BuildContext context) {
@@ -43,6 +45,7 @@ class AuthenticationGate extends StatelessWidget {
           authentication: controller,
           farmController: farmController,
           dashboardControllerFactory: dashboardControllerFactory,
+          weatherControllerFactory: weatherControllerFactory,
         ),
       },
     );

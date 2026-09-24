@@ -12,6 +12,7 @@ abstract final class AppRouter {
     AuthenticationController authentication,
     FarmController farmController,
     DashboardControllerFactory dashboardControllerFactory,
+    WeatherControllerFactory weatherControllerFactory,
   ) {
     if (settings.name == AppRoute.signIn || settings.name == AppRoute.home) {
       return MaterialPageRoute<void>(
@@ -20,6 +21,7 @@ abstract final class AppRouter {
           controller: authentication,
           farmController: farmController,
           dashboardControllerFactory: dashboardControllerFactory,
+          weatherControllerFactory: weatherControllerFactory,
         ),
       );
     }

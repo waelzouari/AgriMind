@@ -13,11 +13,11 @@ final class SupabaseFarmRepository implements FarmRepository {
     try {
       final row = await _client
           .from('farms')
-          .select('id,name')
+          .select('id,name,latitude,longitude')
           .order('created_at')
           .limit(1)
           .maybeSingle();
-      return row == null ? null : _mapFarm(row);
+      return row == null ? null : mapFarmRow(row);
     } on PostgrestException catch (error) {
       throw mapFarmPostgrestException(error);
     } on Object {
@@ -31,16 +31,41 @@ final class SupabaseFarmRepository implements FarmRepository {
       final row = await _client
           .rpc('create_farm_for_current_user', params: {'farm_name': name})
           .single();
-      return _mapFarm(row);
+      return mapFarmRow(row);
     } on PostgrestException catch (error) {
       throw mapFarmPostgrestException(error);
     } on Object {
       throw const FarmFailure(FarmFailureType.unavailable);
     }
   }
+}
 
-  Farm _mapFarm(Map<String, dynamic> row) =>
-      Farm(id: row['id'] as String, name: row['name'] as String);
+Farm mapFarmRow(Map<String, dynamic> row) {
+  final latitude = _optionalCoordinate(row['latitude'], 'latitude');
+  final longitude = _optionalCoordinate(row['longitude'], 'longitude');
+  if ((latitude == null) != (longitude == null)) {
+    throw const FormatException('Farm coordinates must be paired.');
+  }
+  if (latitude != null && (latitude < -90 || latitude > 90)) {
+    throw const FormatException('Farm latitude is out of range.');
+  }
+  if (longitude != null && (longitude < -180 || longitude > 180)) {
+    throw const FormatException('Farm longitude is out of range.');
+  }
+  return Farm(
+    id: row['id'] as String,
+    name: row['name'] as String,
+    latitude: latitude,
+    longitude: longitude,
+  );
+}
+
+double? _optionalCoordinate(Object? value, String field) {
+  if (value == null) return null;
+  if (value is! num) throw FormatException('$field must be numeric.');
+  final coordinate = value.toDouble();
+  if (!coordinate.isFinite) throw FormatException('$field must be finite.');
+  return coordinate;
 }
 
 FarmFailure mapFarmPostgrestException(PostgrestException error) {

@@ -9,10 +9,12 @@ import 'package:agrimind/features/dashboard/presentation/dashboard_session.dart'
 import 'package:agrimind/features/irrigation/application/manual_irrigation_controller.dart';
 import 'package:agrimind/features/onboarding/application/farm_controller.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
+import 'package:agrimind/features/weather/application/weather_controller.dart';
 import 'package:flutter/widgets.dart';
 
 import 'fake_farm_repository.dart';
 import 'fake_manual_irrigation_repository.dart';
+import 'fake_weather_repository.dart';
 
 const testConfig = AppConfig(
   supabaseUrl: 'https://project-ref.supabase.co',
@@ -34,7 +36,7 @@ Widget authTestApp(
   final repository =
       farmRepository ??
       FakeFarmRepository(
-        currentFarm: const Farm(id: 'farm-a', name: 'Ferme A'),
+        currentFarm: Farm(id: 'farm-a', name: 'Ferme A'),
       );
   return AgriMindApp(
     config: testConfig,
@@ -53,6 +55,8 @@ Widget authTestApp(
           ),
           startFreshnessTimer: false,
         ),
+    weatherControllerFactory: () =>
+        WeatherController(repository: FakeWeatherRepository()),
   );
 }
 

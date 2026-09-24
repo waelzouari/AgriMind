@@ -2,7 +2,8 @@
 
 Flutter application foundation, centralized design system, Supabase
 authentication/session boundary, one-farm onboarding, the AGM-017 live
-telemetry dashboard, and AGM-018 acknowledged manual irrigation.
+telemetry dashboard, AGM-018 acknowledged manual irrigation, and contextual
+weather from the persisted AGM-019 aggregation.
 
 ## Prerequisites
 
@@ -60,6 +61,21 @@ test/                    # Offline unit and widget tests
 
 Feature folders are added only by the ticket that implements the corresponding
 feature. Empty future feature shells are intentionally absent.
+
+The dashboard weather section reads the authenticated farm snapshot from
+`weather_snapshots` through the signed-in user's Supabase client and RLS;
+Flutter never calls Open-Meteo directly. Persisted `fresh_until` and
+`stale_until` timestamps drive fresh, stale, and unavailable states, while
+offline availability is reported separately. The last snapshot is cached only
+in memory; Flutter adds no persistent weather cache. Farms without a complete
+latitude/longitude pair show a location-not-configured state.
+
+**AGM-020 MVP provisional presentation policy — subject to later team/product
+review:** weather remains contextual between live sensors and manual irrigation,
+with no separate route. The compact dashboard shows temperature, relative
+humidity, wind, current precipitation, 24-hour rain, and 24-hour ET₀. The 6-hour,
+12-hour, and previous-24-hour rain aggregates remain in the typed backend model
+but are intentionally not displayed in this MVP.
 
 ## Design system
 

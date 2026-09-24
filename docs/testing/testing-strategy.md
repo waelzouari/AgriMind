@@ -44,6 +44,10 @@ recovery receive the same attention as happy paths.
 - Integration: fake hardware plus local Mosquitto; duplicate QoS 1 delivery;
   retained-command protection; disconnect/reconnect; SQLite restart recovery;
   ingestion acknowledgement.
+- P0 assembled journeys: the deterministic AGM-026 suite connects real Edge
+  application boundaries, temporary SQLite, canonical contracts, trusted
+  ingestion, and fake hardware/transport. The maintained scenario-to-evidence
+  mapping is in [the P0 E2E matrix](p0-e2e-matrix.md).
 - Hardware: each sensor, active-low relay boot/cleanup, emergency stop, maximum
   runtime, sensor disconnect, and a supervised soak test.
 
@@ -141,6 +145,10 @@ failure or inference exception leave the pump energized indefinitely.
 Hardware suites and live cloud tests remain manual or scheduled with protected
 credentials; they do not block ordinary pull requests unless a release gate
 requires them.
+
+AGM-026 changes also trigger the existing mobile workflow so its complete
+Flutter regression suite rechecks weather and dashboard behavior. No separate
+live-weather or network-dependent CI path is introduced.
 
 ## Release evidence
 

@@ -56,27 +56,23 @@ sequenceDiagram
   participant E as Edge command handler
   participant G as Safety gate
   participant P as Pump adapter
-  participant S as Soil sensor
   participant O as SQLite outbox
 
   U->>B: Command with id, farm, action, duration, issued_at
   B->>E: QoS 1 delivery (may duplicate)
   E->>E: Validate schema, farm, expiry, mode, idempotency
   E->>G: Request actuation
-  G->>G: Check sensor health, max duration, cooldown, local state
+  G->>G: Apply independent local safety and state-machine rules
   alt accepted
-    G->>S: Read moisture before
     G->>P: Start (active-low relay)
-    G->>O: Persist accepted/start event
+    G->>O: Persist accepted technical ACK
     G-->>B: Accepted acknowledgement
     G->>P: Stop on duration/user command/watchdog
-    G->>O: Persist stop event
-    G->>S: Read after configurable infiltration delay
-    G->>O: Persist delta and classification
-    O-->>B: Publish status/result when connected
+    G->>O: Persist completed/failed technical ACK
+    O-->>B: Publish ACK lifecycle when connected
   else rejected or unsafe
     G->>P: Force OFF
-    G->>O: Persist rejection reason
+    G->>O: Persist rejected/failed technical ACK
     G-->>B: Rejected acknowledgement
   end
 ```
@@ -84,6 +80,10 @@ sequenceDiagram
 QoS 1 implies duplicates. Every command therefore carries a unique
 `command_id`; the edge stores processed IDs and returns the prior result rather
 than actuating twice.
+
+The technical ACK lifecycle is not an agronomic result. AGM-025 may publish a
+separate `IrrigationResult` only from real before/after observations; the
+runtime does not invent an infiltration delay, moisture delta, or outcome.
 
 ## Component boundaries
 

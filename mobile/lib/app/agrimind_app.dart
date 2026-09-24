@@ -6,6 +6,7 @@ import 'package:agrimind/core/design_system/agrimind_theme.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/presentation/authentication_gate.dart';
 import 'package:agrimind/features/dashboard/presentation/dashboard_session.dart';
+import 'package:agrimind/features/farm_manager/application/farm_manager_repository.dart';
 import 'package:agrimind/features/onboarding/application/farm_controller.dart';
 import 'package:flutter/material.dart';
 
@@ -14,6 +15,7 @@ class AgriMindApp extends StatefulWidget {
     required this.config,
     required this.authentication,
     required this.farmController,
+    required this.farmManagerRepository,
     required this.dashboardControllerFactory,
     required this.weatherControllerFactory,
     super.key,
@@ -22,6 +24,7 @@ class AgriMindApp extends StatefulWidget {
   final AppConfig config;
   final AuthenticationController authentication;
   final FarmController farmController;
+  final FarmManagerRepository farmManagerRepository;
   final DashboardControllerFactory dashboardControllerFactory;
   final WeatherControllerFactory weatherControllerFactory;
 
@@ -62,6 +65,7 @@ class _AgriMindAppState extends State<AgriMindApp> {
       home: AuthenticationGate(
         controller: widget.authentication,
         farmController: widget.farmController,
+        farmManagerRepository: widget.farmManagerRepository,
         dashboardControllerFactory: widget.dashboardControllerFactory,
         weatherControllerFactory: widget.weatherControllerFactory,
       ),
@@ -69,6 +73,7 @@ class _AgriMindAppState extends State<AgriMindApp> {
         settings,
         widget.authentication,
         widget.farmController,
+        widget.farmManagerRepository,
         widget.dashboardControllerFactory,
         widget.weatherControllerFactory,
       ),

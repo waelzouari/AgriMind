@@ -17,6 +17,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/fake_authentication_repository.dart';
+import '../../helpers/fake_farm_manager_repository.dart';
 import '../../helpers/fake_manual_irrigation_repository.dart';
 import '../../helpers/fake_weather_repository.dart';
 
@@ -74,6 +75,7 @@ void main() {
     final authRepo = FakeAuthenticationRepository();
     final telemetry = TelemetryRepo();
     final controller = makeController(telemetry);
+    var farmNavigationCalls = 0;
     await controller.start(farm.id, requestedBy: farm.id);
     telemetry.stream.add(
       const TelemetryConnectionChanged(MqttConnectionPhase.connected),
@@ -85,6 +87,7 @@ void main() {
           farm: farm,
           controller: controller,
           weatherController: makeWeatherController(),
+          onOpenFarm: () => farmNavigationCalls += 1,
         ),
       ),
     );
@@ -92,6 +95,8 @@ void main() {
     expect(find.text('MQTT connecté'), findsOneWidget);
     expect(find.text('En attente des premières mesures'), findsOneWidget);
     expect(find.textContaining('appareil en ligne'), findsNothing);
+    await tester.tap(find.text('Ferme'));
+    expect(farmNavigationCalls, 1);
     final sensorY = tester.getTopLeft(find.text('Capteurs en direct')).dy;
     final weatherY = tester.getTopLeft(find.text('Météo')).dy;
     final irrigationY = tester.getTopLeft(find.text('Irrigation manuelle')).dy;
@@ -133,6 +138,7 @@ void main() {
             farm: farm,
             controller: controller,
             weatherController: makeWeatherController(),
+            onOpenFarm: () {},
           ),
         ),
       ),
@@ -165,6 +171,7 @@ void main() {
           authentication: authentication,
           farm: farm,
           controllerFactory: () => makeController(telemetry),
+          farmManagerRepository: FakeFarmManagerRepository(),
           weatherControllerFactory: makeWeatherController,
         ),
       ),
@@ -204,6 +211,7 @@ void main() {
           authentication: authentication,
           farm: initialFarm,
           controllerFactory: () => makeController(telemetry),
+          farmManagerRepository: FakeFarmManagerRepository(),
           weatherControllerFactory: makeWeather,
         ),
       ),
@@ -218,6 +226,7 @@ void main() {
           authentication: authentication,
           farm: Farm(id: farm.id, name: farm.name, latitude: 35, longitude: 11),
           controllerFactory: () => makeController(telemetry),
+          farmManagerRepository: FakeFarmManagerRepository(),
           weatherControllerFactory: makeWeather,
         ),
       ),

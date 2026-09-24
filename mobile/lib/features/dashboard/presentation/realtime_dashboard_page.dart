@@ -5,6 +5,7 @@ import 'package:agrimind/features/auth/application/authentication_controller.dar
 import 'package:agrimind/features/dashboard/application/dashboard_controller.dart';
 import 'package:agrimind/features/dashboard/application/telemetry_repository.dart';
 import 'package:agrimind/features/dashboard/domain/telemetry_reading.dart';
+import 'package:agrimind/features/farm_manager/presentation/farm_navigation_bar.dart';
 import 'package:agrimind/features/irrigation/presentation/manual_irrigation_card.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
 import 'package:agrimind/features/weather/application/weather_controller.dart';
@@ -17,12 +18,14 @@ class RealtimeDashboardPage extends StatelessWidget {
     required this.farm,
     required this.controller,
     required this.weatherController,
+    required this.onOpenFarm,
     super.key,
   });
   final AuthenticationController authentication;
   final Farm farm;
   final DashboardController controller;
   final WeatherController weatherController;
+  final VoidCallback onOpenFarm;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -39,6 +42,11 @@ class RealtimeDashboardPage extends StatelessWidget {
           icon: const Icon(Icons.logout_rounded),
         ),
       ],
+      bottomNavigationBar: FarmNavigationBar(
+        selectedIndex: 0,
+        onHome: () {},
+        onFarm: onOpenFarm,
+      ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [

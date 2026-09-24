@@ -8,6 +8,7 @@ import 'package:agrimind/features/dashboard/application/dashboard_controller.dar
 import 'package:agrimind/features/dashboard/infrastructure/mqtt_telemetry_repository.dart';
 import 'package:agrimind/features/dashboard/infrastructure/mqtt_wire_client.dart';
 import 'package:agrimind/features/dashboard/infrastructure/supabase_device_repository.dart';
+import 'package:agrimind/features/farm_manager/infrastructure/supabase_farm_manager_repository.dart';
 import 'package:agrimind/features/irrigation/application/manual_irrigation_controller.dart';
 import 'package:agrimind/features/irrigation/infrastructure/mqtt_command_wire_client.dart';
 import 'package:agrimind/features/irrigation/infrastructure/mqtt_manual_irrigation_repository.dart';
@@ -34,6 +35,9 @@ Future<void> main() async {
         config: config,
         authentication: AuthenticationController(repository),
         farmController: FarmController(SupabaseFarmRepository(client)),
+        farmManagerRepository: SupabaseFarmManagerRepository(
+          SupabaseFarmManagerRowSource(client),
+        ),
         dashboardControllerFactory: () => DashboardController(
           deviceRepository: SupabaseDeviceRepository(client),
           telemetryRepository: MqttTelemetryRepository(

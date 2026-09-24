@@ -3,9 +3,11 @@ import 'dart:async';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/dashboard/application/dashboard_controller.dart';
 import 'package:agrimind/features/dashboard/presentation/realtime_dashboard_page.dart';
+import 'package:agrimind/features/farm_manager/application/farm_manager_repository.dart';
+import 'package:agrimind/features/farm_manager/presentation/farm_manager_page.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
 import 'package:agrimind/features/weather/application/weather_controller.dart';
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 
 typedef DashboardControllerFactory = DashboardController Function();
 typedef WeatherControllerFactory = WeatherController Function();
@@ -15,12 +17,14 @@ class DashboardSession extends StatefulWidget {
     required this.authentication,
     required this.farm,
     required this.controllerFactory,
+    required this.farmManagerRepository,
     required this.weatherControllerFactory,
     super.key,
   });
   final AuthenticationController authentication;
   final Farm farm;
   final DashboardControllerFactory controllerFactory;
+  final FarmManagerRepository farmManagerRepository;
   final WeatherControllerFactory weatherControllerFactory;
 
   @override
@@ -75,5 +79,13 @@ class _DashboardSessionState extends State<DashboardSession> {
     farm: widget.farm,
     controller: _controller,
     weatherController: _weatherController,
+    onOpenFarm: () => Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (_) => FarmManagerPage(
+          farm: widget.farm,
+          repository: widget.farmManagerRepository,
+        ),
+      ),
+    ),
   );
 }

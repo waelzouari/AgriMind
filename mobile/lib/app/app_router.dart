@@ -3,6 +3,7 @@ import 'package:agrimind/core/widgets/widgets.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/presentation/authentication_gate.dart';
 import 'package:agrimind/features/dashboard/presentation/dashboard_session.dart';
+import 'package:agrimind/features/farm_manager/application/farm_manager_repository.dart';
 import 'package:agrimind/features/onboarding/application/farm_controller.dart';
 import 'package:flutter/material.dart';
 
@@ -11,6 +12,7 @@ abstract final class AppRouter {
     RouteSettings settings,
     AuthenticationController authentication,
     FarmController farmController,
+    FarmManagerRepository farmManagerRepository,
     DashboardControllerFactory dashboardControllerFactory,
     WeatherControllerFactory weatherControllerFactory,
   ) {
@@ -20,6 +22,7 @@ abstract final class AppRouter {
         builder: (_) => AuthenticationGate(
           controller: authentication,
           farmController: farmController,
+          farmManagerRepository: farmManagerRepository,
           dashboardControllerFactory: dashboardControllerFactory,
           weatherControllerFactory: weatherControllerFactory,
         ),

@@ -26,6 +26,12 @@ from agrimind_edge.domain.persistence import (
     PruneResult,
 )
 from agrimind_edge.domain.pump import AutomaticStopResult, PumpDecisionCode, PumpState
+from agrimind_edge.domain.schedules import (
+    IrrigationSchedule,
+    OccurrenceStatus,
+    ScheduleOccurrence,
+    ScheduleSummary,
+)
 from agrimind_edge.domain.sensors import (
     AirReading,
     Measurement,
@@ -53,10 +59,12 @@ __all__ = [
     "InferenceStatus",
     "IrrigationFeatureVector",
     "IrrigationRecommendation",
+    "IrrigationSchedule",
     "Measurement",
     "ModelPrediction",
     "MqttConnectionState",
     "MqttPublication",
+    "OccurrenceStatus",
     "OutboxEntry",
     "ProcessedCommandRecord",
     "PruneResult",
@@ -65,6 +73,8 @@ __all__ = [
     "PumpState",
     "ReadingQuality",
     "ReceivedMqttMessage",
+    "ScheduleOccurrence",
+    "ScheduleSummary",
     "SensorError",
     "SensorErrorCode",
     "SensorSnapshot",

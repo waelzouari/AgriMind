@@ -298,3 +298,97 @@ overlapping commands, failure recovery, and shutdown. Run the complete suite:
 ```bash
 make check
 ```
+
+## Local one-shot scheduled irrigation (AGM-027)
+
+AGM-027 persists one-shot UTC schedules and their technical occurrences in the
+same SQLite database as the event outbox. Schedule definitions and occurrences
+have no automatic retention; the AGM-008 24-hour policy remains limited to
+`edge_events` and `outbox`.
+
+The execution path is deliberately narrow:
+
+```text
+SQLite schedule -> ScheduledIrrigationRunner -> transactional occurrence claim
+                -> PumpCommand -> PumpCommandHandler -> SafePumpController
+```
+
+The scheduler never imports GPIO, calls `PumpPort`, or calls
+`SafePumpController` directly. `PumpCommandHandler` rechecks provisioned
+farm/device identity, command time, local duration policy, pump state, faults,
+and processed-command idempotency. The relay remains HIGH/OFF at controlled
+hardware startup and shutdown.
+
+The farm/device identity stored with a schedule is also copied into its
+occurrence and into the generated command. Reprovisioning the runtime cannot
+silently retarget an older schedule: `PumpCommandHandler` compares that stored
+identity with the currently provisioned identity and rejects a mismatch before
+actuation. The deterministic `requested_by` UUID identifies the local scheduler
+as technical provenance only; it is not an authenticated user, `auth.uid`, or
+human operator identity.
+
+Only one-shot schedules are supported. Times are normalized to UTC. An enabled
+schedule is atomically claimed and disabled before physical dispatch. The
+occurrence and command UUIDs are deterministic, and SQLite additionally
+enforces uniqueness on `(schedule_id, scheduled_for)`. This provides at-most-one
+scheduler dispatch attempt per occurrence under the documented local recovery
+policy; it is not a distributed exactly-once guarantee.
+The three fixed UUIDv5 namespaces (occurrence, command, scheduler provenance)
+are deliberately distinct and form part of the persisted identity contract;
+changing them would break restart idempotency.
+
+The default maximum lateness is 30 seconds. A schedule beyond the configured
+window is recorded as `missed` without a pump command. Claimed occurrences
+found after restart become `unknown_after_restart` and are never replayed.
+Each locally generated command uses a short 30-second validity window before
+the existing command boundary rejects it as expired. That window starts at the
+actual dispatch time, independently of schedule lateness.
+Simultaneous schedules are processed by UTC time and schedule ID; the existing
+safe boundary rejects later commands as `already_running` while the pump is
+active. Disabling a schedule is a soft operation and never stops an active
+pump.
+
+`command_accepted` means only that the existing command boundary accepted the
+ON transition; it does not mean irrigation completed. The AGM-005 automatic
+stop remains responsible for OFF. If acceptance occurs but the scheduler cannot
+persist that result, the occurrence becomes `unknown_after_acceptance` when the
+database permits the fallback update, and is never dispatched again.
+
+### Local CLI
+
+Install `edge` and use one runtime environment file containing the provisioned
+farm/device identity and absolute SQLite path:
+
+```bash
+agrimind-schedule --env-file /etc/agrimind/edge.env create \
+  --at 2026-09-25T07:30:00Z --duration-seconds 30
+agrimind-schedule --env-file /etc/agrimind/edge.env list
+agrimind-schedule --env-file /etc/agrimind/edge.env disable <schedule-id>
+agrimind-schedule --env-file /etc/agrimind/edge.env tick  # may actuate pump
+```
+
+To run on a Raspberry Pi, install `edge[hardware]`, explicitly set
+`AGRIMIND_SCHEDULER_ENABLED=true`, secure the water path, then run:
+
+```bash
+agrimind-schedule --env-file /etc/agrimind/edge.env run
+```
+
+`tick` performs one supervised production-composition evaluation. Both `run`
+and `tick` use the real pump adapter and therefore must not be invoked as an
+ordinary developer smoke test. Ctrl+C/SIGTERM stops the loop, forces the pump
+OFF through the existing controller, cleans up GPIO, and closes SQLite.
+Normal process shutdown and subsequent controlled hardware initialization drive
+the relay OFF. No unmeasured guarantee is made for abrupt power loss beyond the
+documented relay/driver behavior.
+
+Persisted schedules continue locally without Internet, MQTT connectivity,
+Supabase, Flutter, AI, weather, or a broker. AGM-027 creates no MQTT topic and
+does not change `IrrigationResult`; it records only technical scheduler state.
+It does not claim ACK synchronization during extended broker outages.
+
+MVP limitations are one-shot and UTC-only local CLI provisioning, with no
+recurrence, timezone/DST rules, mobile UI, Cloud synchronization, weather/AI
+adjustment, notification, agronomic feedback, or automatic catch-up. CI uses
+SQLite, fake clocks, `FakePump`, and `FakeScheduler`; no supervised Raspberry Pi
+or physical pump result is claimed.

@@ -33,6 +33,11 @@ recovery receive the same attention as happy paths.
 - Persistence: idempotent migrations, atomic event/outbox insertion, ordered
   restart recovery, PUBACK-gated delivery, 24-hour retention, failure fallback,
   and command idempotence across restart using temporary SQLite and fake MQTT.
+- Local scheduling: one-shot UTC validation, deterministic occurrence/command
+  identities, transactional claims, exact lateness boundaries, restart recovery,
+  clock jumps, pump-busy rejection, and sequential simultaneous schedules using
+  temporary SQLite, fake clocks, and the real safe command boundary over fake
+  hardware.
 - Failover: Cloud-first selection, threshold/delay/cooldown behavior, a single
   active command subscription, passive Cloud recovery, local PUBACK isolation,
   Cloud outbox drain, cross-broker idempotency, and secret-safe configuration.

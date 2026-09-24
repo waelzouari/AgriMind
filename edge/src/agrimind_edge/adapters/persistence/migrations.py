@@ -84,4 +84,45 @@ MIGRATIONS: tuple[str, ...] = (
     CREATE INDEX idx_outbox_pending_order
         ON outbox(state, created_at, event_id);
     """,
+    """
+    CREATE TABLE irrigation_schedules (
+        schedule_id TEXT PRIMARY KEY,
+        farm_id TEXT NOT NULL,
+        device_id TEXT NOT NULL,
+        scheduled_for TEXT NOT NULL,
+        duration_seconds INTEGER NOT NULL CHECK (duration_seconds BETWEEN 1 AND 600),
+        enabled INTEGER NOT NULL CHECK (enabled IN (0, 1)),
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        disabled_at TEXT
+    );
+
+    CREATE TABLE irrigation_schedule_occurrences (
+        occurrence_id TEXT PRIMARY KEY,
+        schedule_id TEXT NOT NULL REFERENCES irrigation_schedules(schedule_id),
+        farm_id TEXT NOT NULL,
+        device_id TEXT NOT NULL,
+        scheduled_for TEXT NOT NULL,
+        duration_seconds INTEGER NOT NULL CHECK (duration_seconds BETWEEN 1 AND 600),
+        claimed_at TEXT NOT NULL,
+        decision_at TEXT,
+        status TEXT NOT NULL CHECK (status IN (
+            'claimed', 'command_accepted', 'rejected', 'missed', 'failed',
+            'unknown_after_acceptance', 'unknown_after_restart'
+        )),
+        reason_code TEXT,
+        command_id TEXT NOT NULL UNIQUE,
+        ack_status TEXT,
+        created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL,
+        UNIQUE(schedule_id, scheduled_for)
+    );
+
+    CREATE INDEX idx_irrigation_schedules_due
+        ON irrigation_schedules(enabled, scheduled_for, schedule_id);
+    CREATE INDEX idx_irrigation_occurrences_schedule
+        ON irrigation_schedule_occurrences(schedule_id, scheduled_for);
+    CREATE INDEX idx_irrigation_occurrences_status
+        ON irrigation_schedule_occurrences(status, claimed_at, occurrence_id);
+    """,
 )

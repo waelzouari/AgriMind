@@ -47,6 +47,14 @@ an activity timeline. History uses the same semantic system for sensor,
 irrigation, and inspection events. Notifications should communicate severity
 calmly, without alarmist styling.
 
+AGM-029 implements the first Farm Manager presentation boundary using only the
+data available from AGM-028. My Farm displays the real farm name, total tree
+count, and deterministically ordered neutral grid. Tree Detail displays stable
+identity, user label, and position. Health, per-tree soil moisture, irrigation,
+inspection, and activity remain explicitly unavailable; the disabled inspection
+action does not provide camera or Computer Vision behavior. The Home/Farm
+navigation exposes only implemented destinations.
+
 ## Safety and inference semantics
 
 Future irrigation may visually group Manual, Automatic, and Scheduled modes,

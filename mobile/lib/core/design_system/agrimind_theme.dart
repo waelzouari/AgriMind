@@ -5,8 +5,19 @@ import 'package:agrimind/core/design_system/agrimind_radius.dart';
 import 'package:agrimind/core/design_system/agrimind_spacing.dart';
 import 'package:agrimind/core/design_system/agrimind_typography.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 abstract final class AgriMindTheme {
+  static const systemUiOverlayStyle = SystemUiOverlayStyle(
+    statusBarColor: Colors.transparent,
+    statusBarBrightness: Brightness.light,
+    statusBarIconBrightness: Brightness.dark,
+    systemNavigationBarColor: AgriMindColors.background,
+    systemNavigationBarDividerColor: AgriMindColors.background,
+    systemNavigationBarIconBrightness: Brightness.dark,
+    systemNavigationBarContrastEnforced: false,
+  );
+
   static ThemeData get light {
     const colorScheme = ColorScheme.light(
       primary: AgriMindColors.primaryGreen,
@@ -39,6 +50,7 @@ abstract final class AgriMindTheme {
       appBarTheme: const AppBarTheme(
         backgroundColor: AgriMindColors.background,
         foregroundColor: AgriMindColors.textPrimary,
+        systemOverlayStyle: systemUiOverlayStyle,
         centerTitle: false,
         elevation: AgriMindElevation.none,
         scrolledUnderElevation: AgriMindElevation.low,

@@ -1,11 +1,13 @@
 import 'dart:async';
 
+import 'package:agrimind/core/design_system/agrimind_colors.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/domain/auth_session.dart';
 import 'package:agrimind/features/auth/domain/authentication_failure.dart';
 import 'package:agrimind/features/auth/presentation/sign_in_page.dart';
 import 'package:agrimind/features/dashboard/presentation/realtime_dashboard_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../helpers/auth_test_app.dart';
@@ -25,10 +27,12 @@ void main() {
     await tester.pump();
 
     expect(find.text('Restauration de la session'), findsOneWidget);
+    _expectGlobalSystemUi(tester);
     expect(find.byType(SignInPage), findsNothing);
     repository.restoreCompleter!.complete(null);
     await tester.pumpAndSettle();
     expect(find.byType(SignInPage), findsOneWidget);
+    _expectGlobalSystemUi(tester);
     expect(find.bySemanticsLabel('AgriMind'), findsOneWidget);
     await repository.close();
   });
@@ -115,4 +119,18 @@ void main() {
     expect(find.byType(RealtimeDashboardPage), findsNothing);
     await repository.close();
   });
+}
+
+void _expectGlobalSystemUi(WidgetTester tester) {
+  final regions = tester.widgetList<AnnotatedRegion<SystemUiOverlayStyle>>(
+    find.byType(AnnotatedRegion<SystemUiOverlayStyle>),
+  );
+  expect(
+    regions.any(
+      (region) =>
+          region.value.systemNavigationBarColor == AgriMindColors.background &&
+          region.value.systemNavigationBarIconBrightness == Brightness.dark,
+    ),
+    isTrue,
+  );
 }

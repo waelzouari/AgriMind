@@ -8,4 +8,5 @@ export 'agrimind_metric_card.dart';
 export 'agrimind_scaffold.dart';
 export 'agrimind_section_header.dart';
 export 'agrimind_status_badge.dart';
+export 'agrimind_system_ui.dart';
 export 'agrimind_text_field.dart';

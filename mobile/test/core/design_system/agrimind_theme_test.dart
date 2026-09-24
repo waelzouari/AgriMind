@@ -19,6 +19,16 @@ void main() {
     expect(theme.textTheme.bodyLarge?.color, AgriMindColors.textPrimary);
   });
 
+  test('uses a light global system navigation bar with dark icons', () {
+    const style = AgriMindTheme.systemUiOverlayStyle;
+
+    expect(style.systemNavigationBarColor, AgriMindColors.background);
+    expect(style.systemNavigationBarDividerColor, AgriMindColors.background);
+    expect(style.systemNavigationBarIconBrightness, Brightness.dark);
+    expect(style.systemNavigationBarContrastEnforced, isFalse);
+    expect(AgriMindTheme.light.appBarTheme.systemOverlayStyle, style);
+  });
+
   test('critical text and status combinations meet WCAG AA contrast', () {
     expect(
       _contrastRatio(AgriMindColors.primaryGreen, AgriMindColors.onPrimary),

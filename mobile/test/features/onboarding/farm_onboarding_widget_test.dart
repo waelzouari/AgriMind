@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:agrimind/core/design_system/agrimind_colors.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/domain/auth_session.dart';
 import 'package:agrimind/features/dashboard/presentation/realtime_dashboard_page.dart';
@@ -7,6 +8,7 @@ import 'package:agrimind/features/onboarding/domain/farm.dart';
 import 'package:agrimind/features/onboarding/domain/farm_failure.dart';
 import 'package:agrimind/features/onboarding/presentation/farm_onboarding_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/auth_test_app.dart';
@@ -32,6 +34,11 @@ void main() {
     await tester.pump();
 
     expect(find.text('Vérification de votre ferme'), findsOneWidget);
+    final systemUi = tester.widget<AnnotatedRegion<SystemUiOverlayStyle>>(
+      find.byType(AnnotatedRegion<SystemUiOverlayStyle>),
+    );
+    expect(systemUi.value.systemNavigationBarColor, AgriMindColors.background);
+    expect(systemUi.value.systemNavigationBarIconBrightness, Brightness.dark);
     expect(find.byType(FarmOnboardingPage), findsNothing);
     farmRepository.lookupCompleter!.complete(null);
     await tester.pumpAndSettle();

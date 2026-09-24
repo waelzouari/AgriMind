@@ -8,6 +8,7 @@ import 'package:agrimind/features/dashboard/application/dashboard_controller.dar
 import 'package:agrimind/features/dashboard/infrastructure/mqtt_telemetry_repository.dart';
 import 'package:agrimind/features/dashboard/infrastructure/mqtt_wire_client.dart';
 import 'package:agrimind/features/dashboard/infrastructure/supabase_device_repository.dart';
+import 'package:agrimind/features/farm_manager/infrastructure/supabase_farm_manager_repository.dart';
 import 'package:agrimind/features/irrigation/application/manual_irrigation_controller.dart';
 import 'package:agrimind/features/irrigation/infrastructure/mqtt_command_wire_client.dart';
 import 'package:agrimind/features/irrigation/infrastructure/mqtt_manual_irrigation_repository.dart';
@@ -16,10 +17,12 @@ import 'package:agrimind/features/onboarding/infrastructure/supabase_farm_reposi
 import 'package:agrimind/features/weather/application/weather_controller.dart';
 import 'package:agrimind/features/weather/infrastructure/supabase_weather_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(AgriMindTheme.systemUiOverlayStyle);
   final config = AppConfig.fromEnvironment();
   try {
     config.validate();
@@ -34,6 +37,9 @@ Future<void> main() async {
         config: config,
         authentication: AuthenticationController(repository),
         farmController: FarmController(SupabaseFarmRepository(client)),
+        farmManagerRepository: SupabaseFarmManagerRepository(
+          SupabaseFarmManagerRowSource(client),
+        ),
         dashboardControllerFactory: () => DashboardController(
           deviceRepository: SupabaseDeviceRepository(client),
           telemetryRepository: MqttTelemetryRepository(
@@ -85,15 +91,17 @@ class _ConfigurationErrorApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'AGRIMIND',
-      debugShowCheckedModeBanner: false,
-      theme: AgriMindTheme.light,
-      home: const AgriMindScaffold(
+    return AgriMindSystemUi(
+      child: MaterialApp(
         title: 'AGRIMIND',
-        body: AgriMindErrorState(
-          title: 'Configuration indisponible',
-          message: 'La configuration publique de l’application est invalide.',
+        debugShowCheckedModeBanner: false,
+        theme: AgriMindTheme.light,
+        home: const AgriMindScaffold(
+          title: 'AGRIMIND',
+          body: AgriMindErrorState(
+            title: 'Configuration indisponible',
+            message: 'La configuration publique de l’application est invalide.',
+          ),
         ),
       ),
     );

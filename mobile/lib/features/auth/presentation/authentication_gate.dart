@@ -3,6 +3,7 @@ import 'package:agrimind/core/widgets/widgets.dart';
 import 'package:agrimind/features/auth/application/authentication_controller.dart';
 import 'package:agrimind/features/auth/presentation/sign_in_page.dart';
 import 'package:agrimind/features/dashboard/presentation/dashboard_session.dart';
+import 'package:agrimind/features/farm_manager/application/farm_manager_repository.dart';
 import 'package:agrimind/features/onboarding/application/farm_controller.dart';
 import 'package:agrimind/features/onboarding/presentation/farm_gate.dart';
 import 'package:flutter/material.dart';
@@ -11,6 +12,7 @@ class AuthenticationGate extends StatelessWidget {
   const AuthenticationGate({
     required this.controller,
     required this.farmController,
+    required this.farmManagerRepository,
     required this.dashboardControllerFactory,
     required this.weatherControllerFactory,
     super.key,
@@ -18,6 +20,7 @@ class AuthenticationGate extends StatelessWidget {
 
   final AuthenticationController controller;
   final FarmController farmController;
+  final FarmManagerRepository farmManagerRepository;
   final DashboardControllerFactory dashboardControllerFactory;
   final WeatherControllerFactory weatherControllerFactory;
 
@@ -44,6 +47,7 @@ class AuthenticationGate extends StatelessWidget {
         AuthenticationStatus.authenticated => FarmGate(
           authentication: controller,
           farmController: farmController,
+          farmManagerRepository: farmManagerRepository,
           dashboardControllerFactory: dashboardControllerFactory,
           weatherControllerFactory: weatherControllerFactory,
         ),

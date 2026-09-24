@@ -12,6 +12,7 @@ import 'package:agrimind/features/onboarding/domain/farm.dart';
 import 'package:agrimind/features/weather/application/weather_controller.dart';
 import 'package:flutter/widgets.dart';
 
+import 'fake_farm_manager_repository.dart';
 import 'fake_farm_repository.dart';
 import 'fake_manual_irrigation_repository.dart';
 import 'fake_weather_repository.dart';
@@ -42,6 +43,7 @@ Widget authTestApp(
     config: testConfig,
     authentication: controller,
     farmController: FarmController(repository),
+    farmManagerRepository: FakeFarmManagerRepository(),
     dashboardControllerFactory:
         dashboardControllerFactory ??
         () => DashboardController(

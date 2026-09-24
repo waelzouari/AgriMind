@@ -240,6 +240,12 @@ Flutter repository exposes ordered farm trees, lookup by stable tree UUID, and
 a derived total count. It does not infer per-tree telemetry, irrigation,
 activity, health, anomaly, or inspection data from farm/device-level records.
 
+AGM-029 consumes that repository through dedicated list and detail controllers.
+The mobile Farm tab shows the real total and neutral ordered grid, while detail
+navigation resolves the selected tree again by farm ID and stable tree UUID.
+Unsupported per-tree health, telemetry, irrigation, inspection, and activity
+remain visibly unavailable rather than being inferred from farm/device data.
+
 ## Architecture decisions to record during implementation
 
 - ADR-001 monorepo and boundary model.

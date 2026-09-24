@@ -51,3 +51,7 @@ column-level grants. It also adds the service-written, member-readable
 `weather_snapshots` cache with one row per farm. The 30-minute fresh lifetime,
 6-hour maximum stale age, UTC units, and Open-Meteo fields are TecWeek MVP
 implementation defaults subject to later architecture/product review.
+
+AGM-028 adds the farm-scoped `trees` inventory and its owner-write/member-read
+RLS policies. It does not add Farm Manager UI, Computer Vision state, or
+production seed data.

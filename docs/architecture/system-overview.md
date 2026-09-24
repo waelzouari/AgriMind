@@ -112,7 +112,9 @@ hard duration and hardware safety limits.
 - Edge SQLite is the source of truth for not-yet-synchronized physical events.
 - Supabase is the durable user-facing history after acknowledged ingestion.
 - The Cloud schema relates Auth users to farms through memberships, then farms
-  to devices and canonical v1 event rows. Contract IDs are database
+  to devices, canonical v1 event rows, and an RLS-protected tree inventory.
+  Tree identity is a UUID; its user label and grid position are presentation
+  metadata, not agronomic status. Contract IDs are database
   deduplication keys; AGM-011 RLS protects client reads and AGM-012 restricted
   RPCs authorize trusted telemetry/status writes against the device registry.
 - MQTT is transport, never durable business storage.
@@ -232,6 +234,11 @@ to 6 hours), and refresh-loop (15 minutes) defaults are TecWeek MVP policy
 subject to later architecture/product review. This informative cloud path does
 not publish commands or participate in physical actuation; the edge safety gate
 remains authoritative.
+
+AGM-028 adds the data boundary for Farm Manager without adding its UI. The
+Flutter repository exposes ordered farm trees, lookup by stable tree UUID, and
+a derived total count. It does not infer per-tree telemetry, irrigation,
+activity, health, anomaly, or inspection data from farm/device-level records.
 
 ## Architecture decisions to record during implementation
 

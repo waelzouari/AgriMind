@@ -17,10 +17,12 @@ import 'package:agrimind/features/onboarding/infrastructure/supabase_farm_reposi
 import 'package:agrimind/features/weather/application/weather_controller.dart';
 import 'package:agrimind/features/weather/infrastructure/supabase_weather_repository.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  SystemChrome.setSystemUIOverlayStyle(AgriMindTheme.systemUiOverlayStyle);
   final config = AppConfig.fromEnvironment();
   try {
     config.validate();

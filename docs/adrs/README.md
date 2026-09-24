@@ -7,3 +7,4 @@ a later ADR supersedes rather than silently rewrites a decision.
 
 - [ADR-005: Cloud ingestion acknowledgements](ADR-005-cloud-ingestion-acknowledgements.md)
 - [ADR-006: Portable local irrigation model artifact](ADR-006-portable-local-irrigation-model.md)
+- [ADR-007: AI automatic irrigation with independent local safety gate](ADR-007-ai-automatic-local-safety-gate.md)

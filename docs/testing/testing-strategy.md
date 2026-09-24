@@ -101,6 +101,9 @@ fakes. Ordinary CI never connects to HiveMQ or requires physical hardware.
 - Deterministic preprocessing and seeded splits; prefer group/time split when
   repeated measurements would leak across random rows.
 - Logistic-regression or rule baseline before more complex models.
+- AI automatic-mode tests inject clocks, snapshots, inference, pump state, and
+  command boundaries. They prove fail-closed decisions, accepted-only cooldown,
+  and shared AGM-005 concurrency without GPIO or real-time sleeps.
 - Local irrigation inference: exact snapshot-to-V1 feature order, input
   quality/unit/range/freshness, threshold boundaries, deterministic portable
   artifact loading, integrity/version failures, and Joblib/JSON export parity.

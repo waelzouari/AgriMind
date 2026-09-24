@@ -33,6 +33,16 @@ def _integer(environment: Mapping[str, str], name: str, default: int) -> int:
         raise ValueError(f"{name} must be an integer") from error
 
 
+def _optional_integer(environment: Mapping[str, str], name: str) -> int | None:
+    value = environment.get(name)
+    if value is None or not value.strip():
+        return None
+    try:
+        return int(value)
+    except ValueError as error:
+        raise ValueError(f"{name} must be an integer") from error
+
+
 def _boolean(environment: Mapping[str, str], name: str, default: bool) -> bool:
     value = environment.get(name)
     if value is None:
@@ -143,6 +153,39 @@ class InferenceConfig:
 
 
 @dataclass(frozen=True, slots=True)
+class AutomaticIrrigationConfig:
+    """Opt-in execution policy for one local AI automatic cycle."""
+
+    enabled: bool = False
+    duration_seconds: int | None = None
+    cooldown_seconds: int | None = None
+
+    def __post_init__(self) -> None:
+        if self.duration_seconds is not None and not (
+            1 <= self.duration_seconds <= MAX_PUMP_DURATION_SECONDS
+        ):
+            raise ValueError(
+                f"AI automatic duration must be between 1 and {MAX_PUMP_DURATION_SECONDS} seconds"
+            )
+        if self.cooldown_seconds is not None and self.cooldown_seconds <= 0:
+            raise ValueError("AI automatic cooldown must be a positive number of seconds")
+        if self.enabled and self.duration_seconds is None:
+            raise ValueError("enabled AI automatic mode requires an explicit duration")
+        if self.enabled and self.cooldown_seconds is None:
+            raise ValueError("enabled AI automatic mode requires an explicit cooldown")
+
+    def require_duration_seconds(self) -> int:
+        if not self.enabled or self.duration_seconds is None:
+            raise ValueError("AI automatic duration is unavailable while mode is disabled")
+        return self.duration_seconds
+
+    def require_cooldown_seconds(self) -> int:
+        if not self.enabled or self.cooldown_seconds is None:
+            raise ValueError("AI automatic cooldown is unavailable while mode is disabled")
+        return self.cooldown_seconds
+
+
+@dataclass(frozen=True, slots=True)
 class SchedulerConfig:
     """Fail-safe local one-shot scheduler policy."""
 
@@ -169,6 +212,9 @@ class RuntimeConfig:
     hardware: HardwareConfig = field(default_factory=HardwareConfig)
     persistence: PersistenceConfig = field(default_factory=PersistenceConfig)
     scheduler: SchedulerConfig = field(default_factory=SchedulerConfig)
+    automatic_irrigation: AutomaticIrrigationConfig = field(
+        default_factory=AutomaticIrrigationConfig
+    )
     local_mqtt: MqttConfig | None = None
     local_credentials: MqttCredentials | None = field(default=None, repr=False)
     failover: FailoverPolicy = field(default_factory=FailoverPolicy)
@@ -180,7 +226,8 @@ class RuntimeConfig:
             f"credentials={self.credentials!r}, hardware={self.hardware!r}, "
             f"persistence={self.persistence!r}, local_mqtt={self.local_mqtt!r}, "
             f"local_credentials={self.local_credentials!r}, failover={self.failover!r}, "
-            f"scheduler={self.scheduler!r}, inference={self.inference!r})"
+            f"scheduler={self.scheduler!r}, inference={self.inference!r}, "
+            f"automatic_irrigation={self.automatic_irrigation!r})"
         )
 
     @classmethod
@@ -249,17 +296,32 @@ class RuntimeConfig:
                 _required(environment, "AGRIMIND_LOCAL_MQTT_USERNAME"),
                 _required(environment, "AGRIMIND_LOCAL_MQTT_PASSWORD"),
             )
+        pump_safety = PumpSafetyConfig(
+            farm_id=farm_id,
+            device_id=device_id,
+            max_duration_seconds=_integer(
+                environment,
+                "AGRIMIND_PUMP_MAX_DURATION_SECONDS",
+                MAX_PUMP_DURATION_SECONDS,
+            ),
+        )
+        automatic_irrigation = AutomaticIrrigationConfig(
+            enabled=_boolean(environment, "AGRIMIND_AI_AUTOMATIC_MODE_ENABLED", False),
+            duration_seconds=_optional_integer(
+                environment, "AGRIMIND_AI_AUTOMATIC_DURATION_SECONDS"
+            ),
+            cooldown_seconds=_optional_integer(
+                environment, "AGRIMIND_AI_AUTOMATIC_COOLDOWN_SECONDS"
+            ),
+        )
+        if (
+            automatic_irrigation.enabled
+            and automatic_irrigation.require_duration_seconds() > pump_safety.max_duration_seconds
+        ):
+            raise ValueError("AI automatic duration exceeds the configured local pump limit")
         return cls(
             mqtt=mqtt,
-            pump_safety=PumpSafetyConfig(
-                farm_id=farm_id,
-                device_id=device_id,
-                max_duration_seconds=_integer(
-                    environment,
-                    "AGRIMIND_PUMP_MAX_DURATION_SECONDS",
-                    MAX_PUMP_DURATION_SECONDS,
-                ),
-            ),
+            pump_safety=pump_safety,
             credentials=credentials,
             hardware=HardwareConfig.from_environment(environment),
             persistence=PersistenceConfig(
@@ -278,6 +340,7 @@ class RuntimeConfig:
                     environment, "AGRIMIND_SCHEDULE_MAX_LATENESS_SECONDS", 30
                 ),
             ),
+            automatic_irrigation=automatic_irrigation,
             local_mqtt=local_mqtt,
             local_credentials=local_credentials,
             failover=failover,

@@ -2,6 +2,7 @@
 
 from agrimind_edge.config.hardware import HardwareConfig
 from agrimind_edge.config.runtime import (
+    AutomaticIrrigationConfig,
     InferenceConfig,
     MqttConfig,
     MqttCredentials,
@@ -12,6 +13,7 @@ from agrimind_edge.config.runtime import (
 )
 
 __all__ = [
+    "AutomaticIrrigationConfig",
     "HardwareConfig",
     "InferenceConfig",
     "MqttConfig",

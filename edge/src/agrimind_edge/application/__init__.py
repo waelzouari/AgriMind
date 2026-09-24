@@ -1,5 +1,9 @@
 """Application services and hardware-independent ports."""
 
+from agrimind_edge.application.automatic_irrigation import (
+    AutomaticIrrigationService,
+    IndependentAutomaticSafetyGate,
+)
 from agrimind_edge.application.inference_ports import IrrigationModelPort
 from agrimind_edge.application.ingestion_acknowledgements import (
     IngestionAcknowledgementProcessor,
@@ -30,10 +34,12 @@ from agrimind_edge.application.telemetry import TelemetryMapper
 
 __all__ = [
     "AirSensorPort",
+    "AutomaticIrrigationService",
     "CloudMqttService",
     "DeviceAclPolicy",
     "FailoverEventPublisher",
     "FailoverMqttTransport",
+    "IndependentAutomaticSafetyGate",
     "IngestionAcknowledgementProcessor",
     "IrrigationInferenceService",
     "IrrigationModelPort",

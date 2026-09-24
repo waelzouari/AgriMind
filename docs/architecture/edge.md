@@ -74,7 +74,35 @@ or failed inference returns neither a score nor a recommendation.
 
 This boundary is advisory and has no pump, MQTT, GPIO, duration, or command
 dependency. See `docs/ai/irrigation-inference.md` and ADR-006. Automatic mode
-and composition with an independent physical safety gate remain AGM-024.
+is composed through the independent AGM-024 safety gate described below.
+
+## AI automatic irrigation safety gate (AGM-024)
+
+`AutomaticIrrigationService.evaluate_once()` performs exactly one explicit
+cycle: capture a `SensorSnapshot`, request AGM-023 inference, obtain an
+independent structured safety decision, and only then submit a canonical local
+`PumpCommand` through the AGM-005 handler. A positive ML recommendation is
+necessary but never sufficient physical permission. No inference or automatic
+mode code imports GPIO or calls `PumpPort`.
+
+Automatic mode defaults to disabled. Enabling it requires explicit duration and
+AI-only cooldown values. The gate independently checks the three required local
+sensor qualities and timestamps, compatible successful inference, current pump
+state, and cooldown. Unknown, invalid, stale, future, fault, exception, or
+configuration states block actuation. Cooldown starts only after AGM-005 returns
+an `accepted` acknowledgement and is intentionally memory-only for the MVP, so
+it is lost after process restart.
+
+Manual MQTT, scheduled AGM-027, and AI automatic requests remain separate
+origins but converge on the same `PumpCommandHandler` and `SafePumpController`.
+AGM-005 therefore remains the final concurrency, duration, state-transition,
+automatic-stop, and physical actuation authority.
+
+AGM-019 weather remains informative and outside this physical path: there is no
+Edge weather port, missing weather is never treated as zero rainfall, and Cloud
+data cannot authorize the pump. HC-SR04 reservoir measurements likewise remain
+monitoring-only until physical calibration; AGM-024 introduces no water-level
+threshold. No periodic AI loop or cadence is created.
 
 ## Local event store and outbox (AGM-008)
 

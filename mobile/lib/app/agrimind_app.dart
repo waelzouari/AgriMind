@@ -15,6 +15,7 @@ class AgriMindApp extends StatefulWidget {
     required this.authentication,
     required this.farmController,
     required this.dashboardControllerFactory,
+    required this.weatherControllerFactory,
     super.key,
   });
 
@@ -22,6 +23,7 @@ class AgriMindApp extends StatefulWidget {
   final AuthenticationController authentication;
   final FarmController farmController;
   final DashboardControllerFactory dashboardControllerFactory;
+  final WeatherControllerFactory weatherControllerFactory;
 
   @override
   State<AgriMindApp> createState() => _AgriMindAppState();
@@ -61,12 +63,14 @@ class _AgriMindAppState extends State<AgriMindApp> {
         controller: widget.authentication,
         farmController: widget.farmController,
         dashboardControllerFactory: widget.dashboardControllerFactory,
+        weatherControllerFactory: widget.weatherControllerFactory,
       ),
       onGenerateRoute: (settings) => AppRouter.onGenerateRoute(
         settings,
         widget.authentication,
         widget.farmController,
         widget.dashboardControllerFactory,
+        widget.weatherControllerFactory,
       ),
     );
   }

@@ -91,7 +91,7 @@ void main() {
     expect(find.byType(FarmOnboardingPage), findsNothing);
     farmRepository
       ..lookupError = null
-      ..currentFarm = const Farm(id: 'farm-a', name: 'Ferme retrouvée');
+      ..currentFarm = Farm(id: 'farm-a', name: 'Ferme retrouvée');
     await tester.tap(find.text('Réessayer'));
     await tester.pumpAndSettle();
     expect(find.text('Ferme retrouvée'), findsOneWidget);

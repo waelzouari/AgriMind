@@ -12,13 +12,15 @@ import 'package:agrimind/features/dashboard/presentation/dashboard_session.dart'
 import 'package:agrimind/features/dashboard/presentation/realtime_dashboard_page.dart';
 import 'package:agrimind/features/irrigation/application/manual_irrigation_controller.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
+import 'package:agrimind/features/weather/application/weather_controller.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../helpers/fake_authentication_repository.dart';
 import '../../helpers/fake_manual_irrigation_repository.dart';
+import '../../helpers/fake_weather_repository.dart';
 
-const farm = Farm(
+final farm = Farm(
   id: 'efe00b4d-01e6-4565-8d86-18ba27f76666',
   name: 'sfax farm',
 );
@@ -32,6 +34,7 @@ final class DeviceRepo implements DeviceRepository {
 
 final class TelemetryRepo implements TelemetryRepository {
   final stream = StreamController<TelemetryEvent>.broadcast();
+  int connects = 0;
   int disconnects = 0;
   @override
   Stream<TelemetryEvent> get events => stream.stream;
@@ -39,7 +42,7 @@ final class TelemetryRepo implements TelemetryRepository {
   Future<void> connect({
     required String farmId,
     required String deviceId,
-  }) async {}
+  }) async => connects++;
   @override
   Future<void> disconnect() async => disconnects++;
 }
@@ -61,6 +64,9 @@ DashboardController makeController(TelemetryRepo repository) =>
 Widget app(Widget child) =>
     MaterialApp(theme: AgriMindTheme.light, home: child);
 
+WeatherController makeWeatherController() =>
+    WeatherController(repository: FakeWeatherRepository());
+
 void main() {
   testWidgets('shows broker semantics and waiting state without device claim', (
     tester,
@@ -78,6 +84,7 @@ void main() {
           authentication: AuthenticationController(authRepo),
           farm: farm,
           controller: controller,
+          weatherController: makeWeatherController(),
         ),
       ),
     );
@@ -85,6 +92,11 @@ void main() {
     expect(find.text('MQTT connecté'), findsOneWidget);
     expect(find.text('En attente des premières mesures'), findsOneWidget);
     expect(find.textContaining('appareil en ligne'), findsNothing);
+    final sensorY = tester.getTopLeft(find.text('Capteurs en direct')).dy;
+    final weatherY = tester.getTopLeft(find.text('Météo')).dy;
+    final irrigationY = tester.getTopLeft(find.text('Irrigation manuelle')).dy;
+    expect(sensorY, lessThan(weatherY));
+    expect(weatherY, lessThan(irrigationY));
     controller.dispose();
     await authRepo.close();
   });
@@ -120,6 +132,7 @@ void main() {
             authentication: AuthenticationController(authRepo),
             farm: farm,
             controller: controller,
+            weatherController: makeWeatherController(),
           ),
         ),
       ),
@@ -152,6 +165,7 @@ void main() {
           authentication: authentication,
           farm: farm,
           controllerFactory: () => makeController(telemetry),
+          weatherControllerFactory: makeWeatherController,
         ),
       ),
     );
@@ -159,6 +173,60 @@ void main() {
     await tester.pumpWidget(const SizedBox());
     await tester.pump();
     expect(telemetry.disconnects, greaterThanOrEqualTo(2));
+    await authRepo.close();
+  });
+
+  testWidgets('coordinate changes reload weather without reconnecting MQTT', (
+    tester,
+  ) async {
+    final authRepo = FakeAuthenticationRepository(
+      restoredSession: const AuthSession(
+        userId: '44444444-4444-4444-8444-444444444444',
+        email: 'farmer@example.com',
+      ),
+    );
+    final authentication = AuthenticationController(authRepo);
+    await authentication.restoreSession();
+    final telemetry = TelemetryRepo();
+    final weatherRepository = FakeWeatherRepository();
+    WeatherController makeWeather() =>
+        WeatherController(repository: weatherRepository);
+    final initialFarm = Farm(
+      id: farm.id,
+      name: farm.name,
+      latitude: 34,
+      longitude: 10,
+    );
+
+    await tester.pumpWidget(
+      app(
+        DashboardSession(
+          authentication: authentication,
+          farm: initialFarm,
+          controllerFactory: () => makeController(telemetry),
+          weatherControllerFactory: makeWeather,
+        ),
+      ),
+    );
+    await tester.pump();
+    expect(weatherRepository.calls, 1);
+    expect(telemetry.connects, 1);
+
+    await tester.pumpWidget(
+      app(
+        DashboardSession(
+          authentication: authentication,
+          farm: Farm(id: farm.id, name: farm.name, latitude: 35, longitude: 11),
+          controllerFactory: () => makeController(telemetry),
+          weatherControllerFactory: makeWeather,
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(weatherRepository.calls, 2);
+    expect(telemetry.connects, 1);
+    await tester.pumpWidget(const SizedBox());
     await authRepo.close();
   });
 }

@@ -7,6 +7,8 @@ import 'package:agrimind/features/dashboard/application/telemetry_repository.dar
 import 'package:agrimind/features/dashboard/domain/telemetry_reading.dart';
 import 'package:agrimind/features/irrigation/presentation/manual_irrigation_card.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
+import 'package:agrimind/features/weather/application/weather_controller.dart';
+import 'package:agrimind/features/weather/presentation/weather_section.dart';
 import 'package:flutter/material.dart';
 
 class RealtimeDashboardPage extends StatelessWidget {
@@ -14,11 +16,13 @@ class RealtimeDashboardPage extends StatelessWidget {
     required this.authentication,
     required this.farm,
     required this.controller,
+    required this.weatherController,
     super.key,
   });
   final AuthenticationController authentication;
   final Farm farm;
   final DashboardController controller;
+  final WeatherController weatherController;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -54,6 +58,8 @@ class RealtimeDashboardPage extends StatelessWidget {
           const AgriMindSectionHeader(title: 'Capteurs en direct'),
           const SizedBox(height: AgriMindSpacing.md),
           _DashboardBody(controller: controller),
+          const SizedBox(height: AgriMindSpacing.xl),
+          WeatherSection(controller: weatherController),
           const SizedBox(height: AgriMindSpacing.xl),
           ManualIrrigationCard(controller: controller.manualIrrigation),
         ],

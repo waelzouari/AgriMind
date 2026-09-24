@@ -8,7 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../helpers/fake_farm_repository.dart';
 
 void main() {
-  const farm = Farm(id: 'farm-a', name: 'Ferme A');
+  final farm = Farm(id: 'farm-a', name: 'Ferme A');
 
   test('checks an authenticated user and distinguishes no farm', () async {
     final repository = FakeFarmRepository();

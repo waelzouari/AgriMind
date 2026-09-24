@@ -45,17 +45,16 @@ class AgriMindMetricCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AgriMindSpacing.md),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          Wrap(
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: AgriMindSpacing.xs,
             children: [
               Text(value, style: AgriMindTypography.metricValue),
-              if (unit != null) ...[
-                const SizedBox(width: AgriMindSpacing.xs),
+              if (unit != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: AgriMindSpacing.xs),
                   child: Text(unit!, style: AgriMindTypography.label),
                 ),
-              ],
             ],
           ),
           if (status != null) ...[

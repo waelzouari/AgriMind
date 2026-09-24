@@ -114,6 +114,11 @@ unexpected column. It exits zero when the structure is valid even if individual
 training rows are invalid, because the audit reports rather than preprocesses
 raw data. Consumers must inspect `invalid_training_rows` before training.
 
+AGM-022's filtering, chronological split, baseline selection, measured results,
+and limitations are documented in
+[`irrigation-baseline.md`](irrigation-baseline.md). Feature Contract V1 remains
+unchanged.
+
 ## Audit boundaries
 
 Install the local package, then audit the ignored workbook explicitly:

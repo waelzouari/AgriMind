@@ -10,14 +10,19 @@ requires-python = ">=3.11"
 dependencies = []
 
 [project.optional-dependencies]
+training = [
+  "scikit-learn>=1.9,<1.10",
+]
 dev = [
   "mypy>=1.11,<2",
   "pytest>=8.3,<9",
   "ruff>=0.9,<1",
+  "scikit-learn>=1.9,<1.10",
 ]
 
 [project.scripts]
 agrimind-irrigation-audit = "agrimind_irrigation.audit:main"
+agrimind-irrigation-training = "agrimind_irrigation.training:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -38,3 +43,7 @@ python_version = "3.11"
 strict = true
 warn_unused_configs = true
 files = ["src"]
+
+[[tool.mypy.overrides]]
+module = ["sklearn", "sklearn.*"]
+ignore_missing_imports = true

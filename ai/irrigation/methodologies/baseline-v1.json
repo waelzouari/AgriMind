@@ -1,0 +1,79 @@
+{
+  "artifact_policy": {
+    "format": "joblib",
+    "load_policy": "Only load trusted project-produced artifacts.",
+    "refit_before_test": false,
+    "tracked": false
+  },
+  "candidate_models": {
+    "decision_tree": {
+      "class_weight": [null, "balanced"],
+      "max_depth": [2, 3, 5],
+      "min_samples_leaf": [5, 20, 50]
+    },
+    "logistic_regression": {
+      "C": [0.1, 1.0, 10.0],
+      "class_weight": [null, "balanced"],
+      "max_iter": 1000,
+      "solver": "lbfgs"
+    },
+    "random_forest": {
+      "class_weight": [null, "balanced"],
+      "max_depth": [3, 5],
+      "min_samples_leaf": [5, 20],
+      "n_estimators": [50, 100],
+      "n_jobs": 1
+    }
+  },
+  "class_weight_policy": "Compare unweighted and balanced configurations on validation only.",
+  "dataset_sha256": "F776F34FC9C7BE1E\u0045F59614DC41DDEAD\u0045F6FDE9DC11D908C4\u0045C8A513D6AF4D2D",
+  "feature_contract_version": "v1",
+  "invalid_row_policy": "drop",
+  "methodology_version": "baseline-v1",
+  "primary_metrics": [
+    "positive_f1",
+    "balanced_accuracy"
+  ],
+  "random_seed": 42,
+  "scaling_policy": {
+    "decision_tree": "none",
+    "logistic_regression": "StandardScaler fitted on train only inside one Pipeline",
+    "random_forest": "none"
+  },
+  "secondary_metrics": [
+    "positive_precision",
+    "positive_recall",
+    "average_precision",
+    "roc_auc",
+    "accuracy",
+    "confusion_matrix",
+    "predicted_positive_rate"
+  ],
+  "split": {
+    "strategy": "calendar_chronological",
+    "test_start": "2023-01-05T00:00:00",
+    "timestamps": "naive_excel_1900",
+    "validation_start": "2023-01-04T00:00:00"
+  },
+  "target": {
+    "encoding": {
+      "0": false,
+      "1": true
+    },
+    "name": "irrigation_required"
+  },
+  "test_isolation_policy": {
+    "model_fit_scope": "train_only",
+    "selection_source": "validation",
+    "test_used_for_selection": false
+  },
+  "threshold_selection": {
+    "candidates": "0.5 plus unique validation probabilities",
+    "tie_break_order": [
+      "maximum positive F1",
+      "maximum balanced accuracy",
+      "closest to 0.5",
+      "lowest numeric threshold"
+    ]
+  }
+}

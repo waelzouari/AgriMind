@@ -1,0 +1,37 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agrimind.example/ai/computer-vision/artifact-metadata.v1.schema.json",
+  "title": "AgriMind computer-vision artifact metadata v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_id", "created_at", "code_revision",
+    "dataset_id", "dataset_version", "dataset_fingerprint", "split_fingerprint",
+    "training_config", "architecture", "pretrained_weights", "preprocessing",
+    "label_mapping", "metrics"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "artifact_id": {"type": "string", "minLength": 1},
+    "created_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "code_revision": {"type": "string", "minLength": 1},
+    "dataset_id": {"type": "string", "minLength": 1},
+    "dataset_version": {"type": "string", "minLength": 1},
+    "dataset_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "split_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "training_config": {"type": "object"},
+    "architecture": {"const": "mobilenet_v2"},
+    "pretrained_weights": {"type": ["string", "null"]},
+    "preprocessing": {"type": "object"},
+    "label_mapping": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["NORMAL", "ANOMALY"],
+      "properties": {
+        "NORMAL": {"const": 0},
+        "ANOMALY": {"const": 1}
+      }
+    },
+    "metrics": {"type": "object"}
+  }
+}

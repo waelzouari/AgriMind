@@ -77,6 +77,11 @@ recovery receive the same attention as happy paths.
   fingerprint, code commit, and evaluation report together.
 - CV adds subject/source-aware splits, domain-shift tests using demo-plant
   photos, low-confidence behavior, image validation, and latency.
+- AGM-030 ordinary CI audits tiny generated images, verifies provenance,
+  duplicates, group-preserving splits, preprocessing, metrics, and artifact
+  metadata without downloading a public dataset or installing a training GPU
+  runtime. Full dataset training and measured hardware latency stay explicit,
+  non-CI workflows.
 
 ## Failure and safety matrix
 

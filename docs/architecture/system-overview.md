@@ -252,7 +252,7 @@ remain visibly unavailable rather than being inferred from farm/device data.
 - ADR-002 broker selection, ACLs, and local fallback behavior.
 - ADR-003 Flutter Riverpod and repository boundaries.
 - ADR-004 device ingestion authentication and service-role isolation.
-- ADR-005 local model versus conservative rules fallback and artifact format.
+- ADR-006 portable local irrigation model artifact and safe inference boundary.
 
 These ADRs should be written when the corresponding ticket validates the choice,
 not pre-filled with assumptions now.

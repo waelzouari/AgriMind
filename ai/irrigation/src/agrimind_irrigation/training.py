@@ -13,7 +13,7 @@ from importlib.metadata import version
 from pathlib import Path
 from typing import Any, cast
 
-import joblib  # type: ignore[import-untyped]
+import joblib
 import sklearn
 from sklearn.base import ClassifierMixin
 from sklearn.ensemble import RandomForestClassifier

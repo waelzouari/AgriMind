@@ -23,6 +23,7 @@ dev = [
 [project.scripts]
 agrimind-irrigation-audit = "agrimind_irrigation.audit:main"
 agrimind-irrigation-training = "agrimind_irrigation.training:main"
+agrimind-irrigation-export-tree = "agrimind_irrigation.export_portable_tree:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
@@ -45,5 +46,5 @@ warn_unused_configs = true
 files = ["src"]
 
 [[tool.mypy.overrides]]
-module = ["sklearn", "sklearn.*"]
+module = ["joblib", "sklearn", "sklearn.*"]
 ignore_missing_imports = true

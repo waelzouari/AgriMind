@@ -1,6 +1,15 @@
 """Hardware-independent domain models."""
 
 from agrimind_edge.domain.broker import BrokerState, FailoverPolicy
+from agrimind_edge.domain.irrigation_inference import (
+    DECISION_THRESHOLD,
+    ORDERED_FEATURES,
+    InferenceReasonCode,
+    InferenceStatus,
+    IrrigationFeatureVector,
+    IrrigationRecommendation,
+    ModelPrediction,
+)
 from agrimind_edge.domain.mqtt import (
     DeviceRuntimeStatus,
     MqttConnectionState,
@@ -30,6 +39,8 @@ from agrimind_edge.domain.sensors import (
 )
 
 __all__ = [
+    "DECISION_THRESHOLD",
+    "ORDERED_FEATURES",
     "AirReading",
     "AutomaticStopResult",
     "BrokerState",
@@ -38,7 +49,12 @@ __all__ = [
     "EdgeEventType",
     "EnqueueResult",
     "FailoverPolicy",
+    "InferenceReasonCode",
+    "InferenceStatus",
+    "IrrigationFeatureVector",
+    "IrrigationRecommendation",
     "Measurement",
+    "ModelPrediction",
     "MqttConnectionState",
     "MqttPublication",
     "OutboxEntry",

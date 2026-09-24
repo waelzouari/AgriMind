@@ -59,6 +59,23 @@ reconnect configuration; tests replace it with `FakeMqttTransport`.
 Connection loss cannot actuate the pump or weaken AGM-005. AGM-008 adds a
 durable boundary without adding GPIO knowledge to MQTT code.
 
+## Local irrigation inference boundary (AGM-023)
+
+`IrrigationInferenceService` maps only valid, fresh `SensorSnapshot` soil
+moisture, air temperature, and relative humidity into the immutable AGM-021 V1
+feature order. Stale values are always rejected; the oldest input timestamp is
+limited by the configurable 30-second MVP policy. Future values are rejected.
+
+The infrastructure adapter loads the automatically exported AGM-022 decision
+tree from a versioned JSON package resource, verifies its deterministic SHA-256
+sidecar, validates metadata and tree structure strictly, and caches it. The
+edge never imports or loads Joblib/scikit-learn. Missing, corrupt, incompatible,
+or failed inference returns neither a score nor a recommendation.
+
+This boundary is advisory and has no pump, MQTT, GPIO, duration, or command
+dependency. See `docs/ai/irrigation-inference.md` and ADR-006. Automatic mode
+and composition with an independent physical safety gate remain AGM-024.
+
 ## Local event store and outbox (AGM-008)
 
 SQLite stores only canonical `Telemetry` and `CommandAcknowledgement` events,

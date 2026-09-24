@@ -35,6 +35,7 @@ def test_runtime_configuration_is_validated_and_composes_hardware() -> None:
     assert config.pump_safety.max_duration_seconds == 600
     assert config.hardware.pump_relay_gpio == 18
     assert config.persistence.database_path == Path("/var/lib/agrimind/edge.sqlite3")
+    assert config.inference.max_age_seconds == 30
 
 
 def test_runtime_configuration_repr_redacts_secrets() -> None:
@@ -63,6 +64,8 @@ def test_runtime_configuration_repr_redacts_secrets() -> None:
         ("AGRIMIND_PUMP_MAX_DURATION_SECONDS", "0", "between 1 and 600"),
         ("AGRIMIND_PUMP_MAX_DURATION_SECONDS", "601", "between 1 and 600"),
         ("AGRIMIND_SQLITE_PATH", "relative/edge.sqlite3", "absolute path"),
+        ("AGRIMIND_IRRIGATION_INFERENCE_MAX_AGE_SECONDS", "0", "between 1 and 3600"),
+        ("AGRIMIND_IRRIGATION_INFERENCE_MAX_AGE_SECONDS", "3601", "between 1 and 3600"),
     ],
 )
 def test_invalid_runtime_configuration_fails_fast(name: str, value: str, message: str) -> None:

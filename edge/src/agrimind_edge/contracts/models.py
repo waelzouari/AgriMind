@@ -139,8 +139,12 @@ class IngestionAcknowledgement(JsonContract):
         ):
             if value.int == 0:
                 raise ValueError(f"{field} must be non-zero")
-        if self.event_type != "telemetry":
-            raise ValueError("event_type must be telemetry")
+        if self.event_type not in {
+            "telemetry",
+            "command_acknowledgement",
+            "irrigation_result",
+        }:
+            raise ValueError("event_type must identify a durable edge event")
         format_utc_timestamp(self.occurred_at, "occurred_at")
         if self.status is IngestionAcknowledgementStatus.REJECTED:
             if not self.reason_code:
@@ -560,9 +564,7 @@ class IrrigationResult(JsonContract):
             soil_moisture_before=finite_number(
                 data["soil_moisture_before"], "soil_moisture_before"
             ),
-            soil_moisture_after=finite_number(
-                data["soil_moisture_after"], "soil_moisture_after"
-            ),
+            soil_moisture_after=finite_number(data["soil_moisture_after"], "soil_moisture_after"),
             delta=finite_number(data["delta"], "delta"),
             result=enum_value(IrrigationOutcome, data["result"], "result"),
             completed_at=parse_utc_timestamp(data["completed_at"], "completed_at"),

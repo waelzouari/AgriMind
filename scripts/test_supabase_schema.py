@@ -34,6 +34,10 @@ AGM_028_MIGRATION = (
     ROOT / "backend/supabase/migrations/20260924100000_agm_028_farm_manager.sql"
 )
 AGM_028_TESTS = ROOT / "backend/supabase/tests/agm_028_farm_manager_test.sql"
+AGM_025_MIGRATION = (
+    ROOT / "backend/supabase/migrations/20260924190000_agm_025_irrigation_feedback.sql"
+)
+AGM_025_TESTS = ROOT / "backend/supabase/tests/agm_025_irrigation_feedback_test.sql"
 
 
 def _run(command: list[str]) -> None:
@@ -124,6 +128,8 @@ def run_clean_database() -> None:
             AGM_019_TESTS,
             AGM_028_MIGRATION,
             AGM_028_TESTS,
+            AGM_025_MIGRATION,
+            AGM_025_TESTS,
         ):
             _run(
                 [
@@ -150,7 +156,7 @@ def main() -> int:
     run_clean_database()
     run_clean_database()
     print(
-        "AGM-010/011/012/016/019/028 schema, RLS, ingestion, onboarding, weather, and farm manager tests passed "
+        "AGM-010/011/012/016/019/028/025 schema, RLS, ingestion, onboarding, weather, farm manager, and irrigation feedback tests passed "
         "twice from clean state."
     )
     return 0

@@ -8,6 +8,7 @@ from agrimind_edge.application.inference_ports import IrrigationModelPort
 from agrimind_edge.application.ingestion_acknowledgements import (
     IngestionAcknowledgementProcessor,
 )
+from agrimind_edge.application.irrigation_feedback import IrrigationResultPublisher
 from agrimind_edge.application.irrigation_inference import IrrigationInferenceService
 from agrimind_edge.application.mqtt_acl import DeviceAclPolicy
 from agrimind_edge.application.mqtt_commands import (
@@ -43,6 +44,7 @@ __all__ = [
     "IngestionAcknowledgementProcessor",
     "IrrigationInferenceService",
     "IrrigationModelPort",
+    "IrrigationResultPublisher",
     "MqttAcknowledgementPublisher",
     "MqttPumpCommandProcessor",
     "OutboxService",

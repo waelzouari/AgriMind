@@ -6,8 +6,14 @@ from uuid import UUID
 
 from agrimind_edge.adapters.persistence import SqliteEventOutboxStore
 from agrimind_edge.application import IngestionAcknowledgementProcessor
-from agrimind_edge.contracts import IngestionAcknowledgement, Telemetry, TopicBuilder
+from agrimind_edge.contracts import (
+    CommandAcknowledgement,
+    IngestionAcknowledgement,
+    Telemetry,
+    TopicBuilder,
+)
 from agrimind_edge.contracts.enums import (
+    AcknowledgementStatus,
     IngestionAcknowledgementStatus,
     TelemetryMetric,
 )
@@ -165,3 +171,38 @@ def test_wrong_topic_target_or_unknown_message_cannot_mutate_event(tmp_path: Pat
         store.enqueue(EdgeEvent.from_telemetry(telemetry), publication, NOW)
         is EnqueueResult.BROKER_ACCEPTED
     )
+
+
+def test_command_lifecycle_receipt_confirms_cloud_not_only_broker(tmp_path: Path) -> None:
+    store = SqliteEventOutboxStore(tmp_path / "edge.sqlite3")
+    store.initialize()
+    topics = TopicBuilder(FARM, DEVICE)
+    command_id = UUID("44444444-4444-4444-8444-444444444444")
+    acknowledgement = CommandAcknowledgement(
+        MESSAGE,
+        command_id,
+        FARM,
+        DEVICE,
+        AcknowledgementStatus.COMPLETED,
+        NOW,
+        pump_state=False,
+    )
+    event = EdgeEvent.from_acknowledgement(acknowledgement)
+    publication = MqttPublication(
+        topics.acknowledgement(command_id), acknowledgement.to_json(), 1, False
+    )
+    store.enqueue(event, publication, NOW)
+    store.mark_broker_accepted(MESSAGE, NOW)
+
+    receipt = IngestionAcknowledgement(
+        MESSAGE,
+        FARM,
+        DEVICE,
+        "command_acknowledgement",
+        IngestionAcknowledgementStatus.PERSISTED,
+        NOW,
+    )
+    IngestionAcknowledgementProcessor(store, topics).process(message(receipt, topics))
+
+    assert store.pending(limit=10) == ()
+    assert store.enqueue(event, publication, NOW) is EnqueueResult.CLOUD_CONFIRMED

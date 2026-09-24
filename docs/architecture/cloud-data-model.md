@@ -128,3 +128,11 @@ Device MQTT credentials stay in broker/edge secret stores and are not database
 columns. Deactivation preserves history while making both telemetry and status
 ingestion reject the device. ACK and irrigation-result ingestion remain outside
 AGM-012.
+
+AGM-025 extends the trusted boundary to the existing
+`command_acknowledgements` and `irrigation_results` tables. The worker validates
+the canonical topic and closed V1 contract, requires QoS 1 and non-retained
+events, verifies the active device, and derives the authoritative farm from the
+registry. Service-role-only RPCs converge exact stable-ID redelivery and reject
+different content under the same ID. Authenticated farm members retain
+RLS-protected read-only access; direct Flutter writes remain forbidden.

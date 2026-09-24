@@ -1,7 +1,7 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://agrimind.example/contracts/v1/ingestion-acknowledgement.schema.json",
-  "title": "AgriMind v1 telemetry ingestion acknowledgement",
+  "title": "AgriMind v1 durable event ingestion acknowledgement",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema_version", "message_id", "farm_id", "device_id", "event_type", "status", "occurred_at"],
@@ -10,7 +10,7 @@
     "message_id": {"type": "string", "format": "uuid"},
     "farm_id": {"type": "string", "format": "uuid"},
     "device_id": {"type": "string", "format": "uuid"},
-    "event_type": {"const": "telemetry"},
+    "event_type": {"enum": ["telemetry", "command_acknowledgement", "irrigation_result"]},
     "status": {"enum": ["persisted", "duplicate", "rejected"]},
     "reason_code": {"type": "string", "pattern": "^[a-z0-9]+(?:_[a-z0-9]+)*$", "maxLength": 64},
     "occurred_at": {"type": "string", "format": "date-time", "pattern": "Z$"}

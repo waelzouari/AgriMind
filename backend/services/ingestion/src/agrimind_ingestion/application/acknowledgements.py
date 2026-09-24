@@ -1,4 +1,4 @@
-"""Build minimal secret-safe telemetry persistence acknowledgements."""
+"""Build minimal secret-safe durable-event persistence acknowledgements."""
 
 from __future__ import annotations
 
@@ -20,6 +20,8 @@ _REJECTION_REASONS = {
     "topic_payload_metric_mismatch": "contract_invalid",
     "invalid_qos": "contract_invalid",
     "retained_telemetry": "contract_invalid",
+    "retained_event": "contract_invalid",
+    "topic_payload_command_mismatch": "contract_invalid",
 }
 
 
@@ -36,7 +38,7 @@ class IngestionAcknowledgementFactory:
         self._clock = clock or (lambda: datetime.now(UTC))
 
     def create(self, result: IngestionResult) -> IngestionAcknowledgementPublication | None:
-        if not result.terminal or not result.correlatable_telemetry:
+        if not result.terminal or not result.correlatable_event or result.message_kind is None:
             return None
         if result.outcome is IngestionOutcome.INSERTED:
             status, reason = "persisted", None
@@ -58,7 +60,7 @@ class IngestionAcknowledgementFactory:
             "message_id": str(result.message_id),
             "farm_id": str(result.farm_id),
             "device_id": str(result.device_id),
-            "event_type": "telemetry",
+            "event_type": result.message_kind.value,
             "status": status,
             "occurred_at": now.isoformat(timespec="milliseconds").replace("+00:00", "Z"),
         }

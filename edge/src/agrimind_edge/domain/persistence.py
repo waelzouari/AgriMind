@@ -7,13 +7,19 @@ from datetime import UTC, datetime
 from enum import StrEnum
 from uuid import UUID
 
-from agrimind_edge.contracts import CommandAcknowledgement, PumpCommand, Telemetry
+from agrimind_edge.contracts import (
+    CommandAcknowledgement,
+    IrrigationResult,
+    PumpCommand,
+    Telemetry,
+)
 from agrimind_edge.domain.mqtt import MqttPublication
 
 
 class EdgeEventType(StrEnum):
     TELEMETRY = "telemetry"
     COMMAND_ACKNOWLEDGEMENT = "command_acknowledgement"
+    IRRIGATION_RESULT = "irrigation_result"
 
 
 class EnqueueResult(StrEnum):
@@ -66,6 +72,19 @@ class EdgeEvent:
             device_id=acknowledgement.device_id,
             occurred_at=acknowledgement.occurred_at,
             payload=acknowledgement.to_json(),
+        )
+
+    @classmethod
+    def from_irrigation_result(cls, result: IrrigationResult) -> EdgeEvent:
+        """Persist only an already validated, measured agronomic result."""
+
+        return cls(
+            event_id=result.event_id,
+            event_type=EdgeEventType.IRRIGATION_RESULT,
+            farm_id=result.farm_id,
+            device_id=result.device_id,
+            occurred_at=result.completed_at,
+            payload=result.to_json(),
         )
 
 

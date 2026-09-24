@@ -104,6 +104,10 @@ fakes. Ordinary CI never connects to HiveMQ or requires physical hardware.
 - AI automatic-mode tests inject clocks, snapshots, inference, pump state, and
   command boundaries. They prove fail-closed decisions, accepted-only cooldown,
   and shared AGM-005 concurrency without GPIO or real-time sleeps.
+- Irrigation-feedback tests separate technical ACK lifecycle from measured
+  agronomic results and cover asynchronous completion, transactional outbox
+  persistence, stable-ID replay/conflict behavior, Cloud receipts, and
+  farm/device isolation without GPIO or live credentials.
 - Local irrigation inference: exact snapshot-to-V1 feature order, input
   quality/unit/range/freshness, threshold boundaries, deterministic portable
   artifact loading, integrity/version failures, and Joblib/JSON export parity.

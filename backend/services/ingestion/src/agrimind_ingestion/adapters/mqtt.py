@@ -19,6 +19,8 @@ from agrimind_ingestion.domain import IngestionResult
 
 TELEMETRY_FILTER = "agrimind/v1/farms/+/devices/+/telemetry/+"
 STATUS_FILTER = "agrimind/v1/farms/+/devices/+/status/device"
+ACKNOWLEDGEMENT_FILTER = "agrimind/v1/farms/+/devices/+/acks/+"
+IRRIGATION_RESULT_FILTER = "agrimind/v1/farms/+/devices/+/events/irrigation_result"
 
 
 class MessageProcessor(Protocol):
@@ -94,7 +96,12 @@ class PahoIngestionConsumer:
                 extra={"event": "ingestion_mqtt_connection_rejected"},
             )
             return
-        for topic_filter in (TELEMETRY_FILTER, STATUS_FILTER):
+        for topic_filter in (
+            TELEMETRY_FILTER,
+            STATUS_FILTER,
+            ACKNOWLEDGEMENT_FILTER,
+            IRRIGATION_RESULT_FILTER,
+        ):
             result, _message_id = client.subscribe(topic_filter, qos=1)
             if result != mqtt.MQTT_ERR_SUCCESS:
                 raise RuntimeError("MQTT ingestion subscription was rejected")

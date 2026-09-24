@@ -9,6 +9,8 @@ import paho.mqtt.client as mqtt
 import pytest
 
 from agrimind_ingestion.adapters.mqtt import (
+    ACKNOWLEDGEMENT_FILTER,
+    IRRIGATION_RESULT_FILTER,
     STATUS_FILTER,
     TELEMETRY_FILTER,
     PahoIngestionConsumer,
@@ -135,7 +137,12 @@ def test_verified_tls_manual_ack_and_required_subscriptions() -> None:
     assert client.context is not None
     assert client.context.check_hostname is True
     assert client.context.verify_mode == 2
-    assert client.subscriptions == [(TELEMETRY_FILTER, 1), (STATUS_FILTER, 1)]
+    assert client.subscriptions == [
+        (TELEMETRY_FILTER, 1),
+        (STATUS_FILTER, 1),
+        (ACKNOWLEDGEMENT_FILTER, 1),
+        (IRRIGATION_RESULT_FILTER, 1),
+    ]
 
 
 def test_terminal_result_publishes_application_ack_before_broker_ack() -> None:

@@ -15,12 +15,14 @@ from agrimind_edge.application.persistence_ports import PersistenceConflict, Per
 from agrimind_edge.contracts import (
     CommandAcknowledgement,
     IngestionAcknowledgement,
+    IrrigationResult,
     PumpCommand,
     Telemetry,
 )
 from agrimind_edge.contracts.enums import (
     AcknowledgementStatus,
     IngestionAcknowledgementStatus,
+    IrrigationOutcome,
     PumpAction,
     TelemetryMetric,
 )
@@ -47,6 +49,19 @@ def telemetry(number: int, occurred_at: datetime = NOW) -> Telemetry:
 
 def publication(item: Telemetry) -> MqttPublication:
     return MqttPublication("agrimind/v1/test", item.to_json(), 1, False)
+
+
+def irrigation_result(number: int, occurred_at: datetime = NOW) -> IrrigationResult:
+    return IrrigationResult(
+        UUID(int=number),
+        FARM_ID,
+        DEVICE_ID,
+        40.0,
+        45.0,
+        5.0,
+        IrrigationOutcome.INCREASED,
+        occurred_at,
+    )
 
 
 def ingestion_ack(
@@ -91,6 +106,57 @@ def test_duplicate_is_idempotent_but_changed_content_conflicts(tmp_path: Path) -
     changed = MqttPublication("agrimind/v1/changed", item.to_json(), 1, False)
     with pytest.raises(PersistenceConflict):
         store.enqueue(event, changed, NOW)
+
+
+def test_measured_irrigation_result_uses_atomic_existing_event_outbox(tmp_path: Path) -> None:
+    store = SqliteEventOutboxStore(tmp_path / "edge.sqlite3")
+    store.initialize()
+    result = irrigation_result(80)
+    event = EdgeEvent.from_irrigation_result(result)
+    mqtt = MqttPublication("agrimind/v1/test/result", result.to_json(), 1, False)
+
+    assert store.enqueue(event, mqtt, NOW) is EnqueueResult.CREATED
+    assert store.enqueue(event, mqtt, NOW) is EnqueueResult.PENDING
+    pending = store.pending(limit=10)
+    assert pending[0].event == event
+    assert pending[0].publication == mqtt
+
+    conflicting = MqttPublication("agrimind/v1/test/changed", result.to_json(), 1, False)
+    with pytest.raises(PersistenceConflict):
+        store.enqueue(event, conflicting, NOW)
+
+
+def test_command_ack_waits_for_cloud_application_receipt(tmp_path: Path) -> None:
+    store = SqliteEventOutboxStore(tmp_path / "edge.sqlite3")
+    store.initialize()
+    acknowledgement = CommandAcknowledgement(
+        UUID(int=81),
+        UUID(int=82),
+        FARM_ID,
+        DEVICE_ID,
+        AcknowledgementStatus.COMPLETED,
+        NOW,
+        pump_state=False,
+    )
+    event = EdgeEvent.from_acknowledgement(acknowledgement)
+    mqtt = MqttPublication("agrimind/v1/test/ack", acknowledgement.to_json(), 1, False)
+    store.enqueue(event, mqtt, NOW)
+
+    store.mark_broker_accepted(event.event_id, NOW)
+    assert store.enqueue(event, mqtt, NOW) is EnqueueResult.BROKER_ACCEPTED
+    assert len(store.pending(limit=10)) == 1
+
+    receipt = IngestionAcknowledgement(
+        event.event_id,
+        FARM_ID,
+        DEVICE_ID,
+        "command_acknowledgement",
+        IngestionAcknowledgementStatus.PERSISTED,
+        NOW,
+    )
+    assert store.apply_ingestion_acknowledgement(receipt) is True
+    assert store.pending(limit=10) == ()
+    assert store.enqueue(event, mqtt, NOW) is EnqueueResult.CLOUD_CONFIRMED
 
 
 def test_pending_order_is_occurrence_time_then_event_id(tmp_path: Path) -> None:

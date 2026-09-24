@@ -42,6 +42,21 @@ def test_positive_terminal_results_create_qos1_nonretained_receipt(
     assert json.loads(publication.payload)["status"] == expected
 
 
+@pytest.mark.parametrize(
+    "kind",
+    [MessageKind.COMMAND_ACKNOWLEDGEMENT, MessageKind.IRRIGATION_RESULT],
+)
+def test_feedback_events_receive_correlated_application_receipts(kind: MessageKind) -> None:
+    publication = IngestionAcknowledgementFactory(clock=lambda: NOW).create(
+        IngestionResult(IngestionOutcome.INSERTED, "inserted", MESSAGE, DEVICE, FARM, kind)
+    )
+
+    assert publication is not None
+    payload = json.loads(publication.payload)
+    assert payload["event_type"] == kind.value
+    assert payload["message_id"] == str(MESSAGE)
+
+
 def test_correlatable_rejection_is_bounded_and_retryable_or_uncorrelatable_is_silent() -> None:
     factory = IngestionAcknowledgementFactory(clock=lambda: NOW)
     rejected = factory.create(result(IngestionOutcome.REJECTED, "device_farm_mismatch"))

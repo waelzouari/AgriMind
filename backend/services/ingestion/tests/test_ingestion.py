@@ -60,6 +60,37 @@ def status_payload(**changes: object) -> bytes:
     return json.dumps(payload).encode()
 
 
+def acknowledgement_payload(**changes: object) -> bytes:
+    payload: dict[str, object] = {
+        "schema_version": 1,
+        "acknowledgement_id": "55555555-5555-4555-8555-555555555555",
+        "command_id": "66666666-6666-4666-8666-666666666666",
+        "farm_id": str(FARM_A),
+        "device_id": str(DEVICE),
+        "status": "completed",
+        "occurred_at": "2026-09-23T12:00:00Z",
+        "pump_state": False,
+    }
+    payload.update(changes)
+    return json.dumps(payload).encode()
+
+
+def irrigation_result_payload(**changes: object) -> bytes:
+    payload: dict[str, object] = {
+        "schema_version": 1,
+        "event_id": "77777777-7777-4777-8777-777777777777",
+        "farm_id": str(FARM_A),
+        "device_id": str(DEVICE),
+        "soil_moisture_before": 40.0,
+        "soil_moisture_after": 45.0,
+        "delta": 5.0,
+        "result": "increased",
+        "completed_at": "2026-09-23T12:00:00Z",
+    }
+    payload.update(changes)
+    return json.dumps(payload).encode()
+
+
 def service(*, active: bool = True) -> tuple[IngestionService, FakeRegistry, FakePersistence]:
     registry = FakeRegistry({FARM_A, FARM_B})
     registry.devices[DEVICE] = DeviceRegistration(DEVICE, FARM_A, "edge", active)
@@ -81,6 +112,14 @@ def status_topic(farm: UUID = FARM_A, device: UUID = DEVICE) -> str:
     return f"agrimind/v1/farms/{farm}/devices/{device}/status/device"
 
 
+def acknowledgement_topic(farm: UUID = FARM_A, device: UUID = DEVICE) -> str:
+    return f"agrimind/v1/farms/{farm}/devices/{device}/acks/66666666-6666-4666-8666-666666666666"
+
+
+def irrigation_result_topic(farm: UUID = FARM_A, device: UUID = DEVICE) -> str:
+    return f"agrimind/v1/farms/{farm}/devices/{device}/events/irrigation_result"
+
+
 def test_active_registered_telemetry_and_status_are_persisted() -> None:
     instance, _, persistence = service()
 
@@ -91,6 +130,56 @@ def test_active_registered_telemetry_and_status_are_persisted() -> None:
     assert status.outcome is IngestionOutcome.INSERTED
     assert persistence.telemetry[0]["farm_id"] == str(FARM_A)
     assert len(persistence.statuses) == 1
+
+
+def test_acknowledgement_and_measured_irrigation_result_are_persisted_separately() -> None:
+    instance, _, persistence = service()
+
+    acknowledgement = instance.process(
+        acknowledgement_topic(), acknowledgement_payload(), qos=1, retain=False
+    )
+    result = instance.process(
+        irrigation_result_topic(), irrigation_result_payload(), qos=1, retain=False
+    )
+
+    assert acknowledgement.outcome is IngestionOutcome.INSERTED
+    assert result.outcome is IngestionOutcome.INSERTED
+    assert persistence.acknowledgements[0]["status"] == "completed"
+    assert persistence.irrigation_results[0]["result"] == "increased"
+
+
+@pytest.mark.parametrize(
+    ("topic", "payload", "qos", "retain", "reason"),
+    [
+        (acknowledgement_topic(), acknowledgement_payload(), 0, False, "invalid_qos"),
+        (acknowledgement_topic(), acknowledgement_payload(), 1, True, "retained_event"),
+        (
+            acknowledgement_topic(),
+            acknowledgement_payload(command_id="aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+            1,
+            False,
+            "topic_payload_command_mismatch",
+        ),
+        (
+            irrigation_result_topic(),
+            irrigation_result_payload(delta=4.0),
+            1,
+            False,
+            "invalid_contract",
+        ),
+    ],
+)
+def test_feedback_event_contract_failures_are_permanent(
+    topic: str, payload: bytes, qos: int, retain: bool, reason: str
+) -> None:
+    instance, _, persistence = service()
+
+    result = instance.process(topic, payload, qos=qos, retain=retain)
+
+    assert result.outcome is IngestionOutcome.REJECTED
+    assert result.reason_code == reason
+    assert persistence.acknowledgements == []
+    assert persistence.irrigation_results == []
 
 
 @pytest.mark.parametrize(
@@ -147,6 +236,49 @@ def test_unknown_inactive_and_registry_cross_farm_devices_are_rejected() -> None
         instance.process(telemetry_topic(), telemetry_payload(), qos=1, retain=False).reason_code
         == "device_farm_mismatch"
     )
+
+
+def test_feedback_event_enforces_registry_authority_and_retry_semantics() -> None:
+    instance, registry, persistence = service()
+    registry.devices.clear()
+    unknown = instance.process(
+        irrigation_result_topic(), irrigation_result_payload(), qos=1, retain=False
+    )
+    assert unknown.reason_code == "unknown_device"
+    assert unknown.correlatable_event is True
+
+    registry.devices[DEVICE] = DeviceRegistration(DEVICE, FARM_A, None, False)
+    inactive = instance.process(
+        irrigation_result_topic(), irrigation_result_payload(), qos=1, retain=False
+    )
+    assert inactive.reason_code == "inactive_device"
+
+    registry.devices[DEVICE] = DeviceRegistration(DEVICE, FARM_B, None, True)
+    mismatch = instance.process(
+        irrigation_result_topic(), irrigation_result_payload(), qos=1, retain=False
+    )
+    assert mismatch.reason_code == "device_farm_mismatch"
+
+    registry.devices[DEVICE] = DeviceRegistration(DEVICE, FARM_A, None, True)
+    persistence.outcome = "duplicate"
+    duplicate = instance.process(
+        irrigation_result_topic(), irrigation_result_payload(), qos=1, retain=False
+    )
+    assert duplicate.outcome is IngestionOutcome.DUPLICATE
+
+    persistence.failure = PersistenceRejected("message_id_conflict")
+    conflict = instance.process(
+        irrigation_result_topic(), irrigation_result_payload(), qos=1, retain=False
+    )
+    assert conflict.outcome is IngestionOutcome.REJECTED
+    assert conflict.reason_code == "message_id_conflict"
+
+    persistence.failure = PersistenceUnavailable("offline")
+    unavailable = instance.process(
+        irrigation_result_topic(), irrigation_result_payload(), qos=1, retain=False
+    )
+    assert unavailable.outcome is IngestionOutcome.RETRYABLE
+    assert unavailable.terminal is False
 
 
 def test_retained_telemetry_and_wrong_qos_are_rejected_but_retained_status_is_allowed() -> None:

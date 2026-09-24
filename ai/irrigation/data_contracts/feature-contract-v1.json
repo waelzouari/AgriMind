@@ -1,0 +1,124 @@
+{
+  "contract_version": "v1",
+  "policy": "AGM-021 MVP provisional data contract policy — subject to later field calibration and validation with AgriMind hardware.",
+  "dataset": {
+    "logical_name": "Mendeley Irrigation-Dataset",
+    "version": "1",
+    "doi": "10.17632/67gkrzbwrr.1",
+    "license": "CC BY 4.0",
+    "primary_file": "second dataset collected.xlsx",
+    "primary_file_sha256": "F776F34FC9C7BE1E\u0045F59614DC41DDEAD\u0045F6FDE9DC11D908C4\u0045C8A513D6AF4D2D",
+    "sheet_name": "smart irrigation",
+    "provenance": "Collected in Iraq with custom-built devices over one week; published by Zameer Ahmad through Mendeley Data.",
+    "identity_evidence": {
+      "locally_verified": "Primary filename, workbook schema, row count, and SHA-256 of the raw local file.",
+      "externally_documented": "Logical name, DOI, version, licence, contributor, collection location, and publication metadata."
+    },
+    "storage_policy": "The real dataset remains ignored under ai/irrigation/data/raw and is never required by ordinary CI."
+  },
+  "metadata_columns": [
+    "Time"
+  ],
+  "ordered_features": [
+    {
+      "canonical_name": "soil_moisture_index_0_100",
+      "dataset_column": "Soil Moisture",
+      "runtime_source": "SensorSnapshot.soil_humidity",
+      "scalar_type": "float",
+      "unit": "normalized_index_0_100",
+      "required": true,
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 100
+      },
+      "missing_behavior": "invalid_training_row",
+      "runtime_quality_requirement": "valid",
+      "timestamp_semantics": "The value must be observed before the recommendation and retain its UTC observation timestamp.",
+      "known_limitations": "Dataset sensor calibration is undocumented and is not demonstrated equivalent to the AgriMind ADS1115 calibration. This is an MVP proxy, not a metrological or agronomic equivalence claim."
+    },
+    {
+      "canonical_name": "air_temperature_c",
+      "dataset_column": "Temperature",
+      "runtime_source": "SensorSnapshot.temperature",
+      "scalar_type": "float",
+      "unit": "celsius",
+      "required": true,
+      "valid_range": null,
+      "value_requirement": "finite",
+      "missing_behavior": "invalid_training_row",
+      "runtime_quality_requirement": "valid",
+      "timestamp_semantics": "The value must be observed before the recommendation and retain its UTC observation timestamp."
+    },
+    {
+      "canonical_name": "air_relative_humidity_percent",
+      "dataset_column": "Humidity",
+      "runtime_source": "SensorSnapshot.air_humidity",
+      "scalar_type": "float",
+      "unit": "percent_relative_humidity",
+      "required": true,
+      "valid_range": {
+        "minimum": 0,
+        "maximum": 100
+      },
+      "missing_behavior": "invalid_training_row",
+      "runtime_quality_requirement": "valid",
+      "timestamp_semantics": "The value must be observed before the recommendation and retain its UTC observation timestamp."
+    }
+  ],
+  "target": {
+    "canonical_name": "irrigation_required",
+    "source_column": "irrigation",
+    "task": "binary_classification",
+    "encoding": {
+      "0": false,
+      "1": true
+    },
+    "missing_behavior": "invalid_training_row",
+    "dataset_source_semantic": "Observed irrigation status encoded as OFF/ON in the source dataset.",
+    "mvp_interpretation": "Provisional estimate that irrigation is required before physical actuation.",
+    "semantic": "A prediction is only an irrigation recommendation and never a pump command.",
+    "known_limitations": "The source status is provisionally interpreted as irrigation requirement for this MVP; it is not proof of a universal agronomic need label."
+  },
+  "excluded_columns": [
+    {
+      "dataset_column": "Time",
+      "classification": "metadata",
+      "reason": "Ordering and future AGM-022 temporal split key only; never a V1 model feature."
+    },
+    {
+      "dataset_column": "best time",
+      "classification": "known_leakage",
+      "reason": "Explicitly forbidden because it reveals the target in the audited dataset."
+    },
+    {
+      "dataset_column": "Soil Tempertuer",
+      "classification": "unsupported_runtime",
+      "reason": "AgriMind has no corresponding runtime sensor."
+    },
+    {
+      "dataset_column": "crop type",
+      "classification": "unsupported_runtime",
+      "reason": "Dataset codes 1/2 have no stable AgriMind runtime contract."
+    },
+    {
+      "canonical_source": "weather AGM-019",
+      "classification": "out_of_model_v1",
+      "reason": "No compatible training feature exists and V1 must remain offline-capable."
+    },
+    {
+      "canonical_source": "tank level",
+      "classification": "system_safety_state",
+      "reason": "Tank level is not an agronomic ML feature."
+    },
+    {
+      "canonical_source": "soil_raw",
+      "classification": "calibration_specific",
+      "reason": "Raw ADC values are not portable across sensor calibrations."
+    },
+    {
+      "canonical_source": "farm/device/correlation identifiers",
+      "classification": "metadata",
+      "reason": "Identifiers are for grouping and traceability, not prediction."
+    }
+  ]
+}

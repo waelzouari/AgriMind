@@ -40,6 +40,9 @@ def test_runtime_configuration_is_validated_and_composes_hardware() -> None:
     assert config.scheduler.poll_interval_seconds == 5
     assert config.scheduler.max_lateness_seconds == 30
     assert config.inference.max_age_seconds == 30
+    assert config.automatic_irrigation.enabled is False
+    assert config.automatic_irrigation.duration_seconds is None
+    assert config.automatic_irrigation.cooldown_seconds is None
 
 
 def test_runtime_configuration_repr_redacts_secrets() -> None:
@@ -75,6 +78,12 @@ def test_runtime_configuration_repr_redacts_secrets() -> None:
         ("AGRIMIND_SCHEDULER_POLL_INTERVAL_SECONDS", "61", "between 0.5 and 60"),
         ("AGRIMIND_SCHEDULE_MAX_LATENESS_SECONDS", "-1", "between 0 and 300"),
         ("AGRIMIND_SCHEDULE_MAX_LATENESS_SECONDS", "301", "between 0 and 300"),
+        ("AGRIMIND_AI_AUTOMATIC_MODE_ENABLED", "yes", "must be true or false"),
+        ("AGRIMIND_AI_AUTOMATIC_DURATION_SECONDS", "invalid", "must be an integer"),
+        ("AGRIMIND_AI_AUTOMATIC_DURATION_SECONDS", "0", "between 1 and 600"),
+        ("AGRIMIND_AI_AUTOMATIC_DURATION_SECONDS", "601", "between 1 and 600"),
+        ("AGRIMIND_AI_AUTOMATIC_COOLDOWN_SECONDS", "invalid", "must be an integer"),
+        ("AGRIMIND_AI_AUTOMATIC_COOLDOWN_SECONDS", "0", "positive"),
     ],
 )
 def test_invalid_runtime_configuration_fails_fast(name: str, value: str, message: str) -> None:
@@ -147,6 +156,60 @@ def test_disabled_scheduler_allows_zero_lateness_without_actuation_claim() -> No
 
     assert config.scheduler.enabled is False
     assert config.scheduler.max_lateness_seconds == 0
+
+
+def test_enabled_ai_automatic_mode_requires_explicit_bounded_policy() -> None:
+    environment = _environment()
+    environment.update(
+        {
+            "AGRIMIND_AI_AUTOMATIC_MODE_ENABLED": "true",
+            "AGRIMIND_AI_AUTOMATIC_DURATION_SECONDS": "30",
+            "AGRIMIND_AI_AUTOMATIC_COOLDOWN_SECONDS": "300",
+        }
+    )
+
+    config = RuntimeConfig.from_environment(environment)
+
+    assert config.automatic_irrigation.enabled is True
+    assert config.automatic_irrigation.require_duration_seconds() == 30
+    assert config.automatic_irrigation.require_cooldown_seconds() == 300
+
+
+@pytest.mark.parametrize(
+    ("missing", "message"),
+    [
+        ("AGRIMIND_AI_AUTOMATIC_DURATION_SECONDS", "explicit duration"),
+        ("AGRIMIND_AI_AUTOMATIC_COOLDOWN_SECONDS", "explicit cooldown"),
+    ],
+)
+def test_enabled_ai_automatic_mode_rejects_missing_policy(missing: str, message: str) -> None:
+    environment = _environment()
+    environment.update(
+        {
+            "AGRIMIND_AI_AUTOMATIC_MODE_ENABLED": "true",
+            "AGRIMIND_AI_AUTOMATIC_DURATION_SECONDS": "30",
+            "AGRIMIND_AI_AUTOMATIC_COOLDOWN_SECONDS": "300",
+        }
+    )
+    del environment[missing]
+
+    with pytest.raises(ValueError, match=message):
+        RuntimeConfig.from_environment(environment)
+
+
+def test_ai_automatic_duration_respects_stricter_local_pump_limit() -> None:
+    environment = _environment()
+    environment.update(
+        {
+            "AGRIMIND_PUMP_MAX_DURATION_SECONDS": "20",
+            "AGRIMIND_AI_AUTOMATIC_MODE_ENABLED": "true",
+            "AGRIMIND_AI_AUTOMATIC_DURATION_SECONDS": "30",
+            "AGRIMIND_AI_AUTOMATIC_COOLDOWN_SECONDS": "300",
+        }
+    )
+
+    with pytest.raises(ValueError, match="configured local pump limit"):
+        RuntimeConfig.from_environment(environment)
 
 
 def test_reconnect_minimum_cannot_exceed_maximum() -> None:

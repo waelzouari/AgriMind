@@ -120,6 +120,10 @@ hard duration and hardware safety limits.
 - MQTT is transport, never durable business storage.
 - The model recommendation is advisory input; the edge safety gate owns the
   final actuation decision.
+- AGM-024 implements that separation as one explicit, opt-in automatic cycle.
+  The independent gate rechecks local sensor health, pump state, and an AI-only
+  cooldown before the request reaches the existing AGM-005 handler. Weather and
+  reservoir monitoring cannot directly authorize actuation.
 - `event_id`/`reading_id` UUIDs generated at source provide idempotent cloud
   ingestion. Server timestamps and device timestamps are both retained.
 

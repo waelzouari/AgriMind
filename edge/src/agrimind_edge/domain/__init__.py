@@ -1,5 +1,10 @@
 """Hardware-independent domain models."""
 
+from agrimind_edge.domain.automatic_irrigation import (
+    AutomaticIrrigationResult,
+    AutomaticSafetyDecision,
+    AutomaticSafetyReason,
+)
 from agrimind_edge.domain.broker import BrokerState, FailoverPolicy
 from agrimind_edge.domain.irrigation_inference import (
     DECISION_THRESHOLD,
@@ -48,6 +53,9 @@ __all__ = [
     "DECISION_THRESHOLD",
     "ORDERED_FEATURES",
     "AirReading",
+    "AutomaticIrrigationResult",
+    "AutomaticSafetyDecision",
+    "AutomaticSafetyReason",
     "AutomaticStopResult",
     "BrokerState",
     "DeviceRuntimeStatus",

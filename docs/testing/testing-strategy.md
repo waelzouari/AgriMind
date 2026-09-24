@@ -58,6 +58,11 @@ recovery receive the same attention as happy paths.
 - Offline-to-Cloud synchronization: broker acceptance versus Cloud
   confirmation, stable message identity, receipt validation, permanent
   rejection, restart/redelivery convergence, and the 24-hour boundary.
+- Weather: deterministic rolling-window and clock-boundary tests, fake HTTP
+  adapter tests with no Internet, persistent cache behavior, location-change
+  invalidation, and PostgreSQL integration tests for coordinate constraints,
+  grants, RLS, service writes, and cross-farm isolation. A live Open-Meteo
+  smoke test is optional and never required by ordinary CI.
 
 ### Flutter
 

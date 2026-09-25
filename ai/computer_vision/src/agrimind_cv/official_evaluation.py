@@ -59,6 +59,7 @@ class OfficialConfig:
     model_version: str
     artifact_filename: str
     release_tag: str
+    execution_device: str
     dataset_fingerprint: str
     related_manifest_fingerprint: str
     split_fingerprint: str
@@ -72,6 +73,7 @@ class OfficialConfig:
             "model_version",
             "artifact_filename",
             "release_tag",
+            "execution_device",
             "dataset_fingerprint",
             "related_manifest_fingerprint",
             "split_fingerprint",
@@ -81,6 +83,8 @@ class OfficialConfig:
         config = cls(**raw)
         if config.schema_version != 1 or config.threshold_rule_version != THRESHOLD_RULE:
             raise ValueError("official evaluation configuration version is incompatible")
+        if config.execution_device != "cuda":
+            raise ValueError("official AGM-031 evaluation requires the versioned CUDA device")
         for value in (
             config.dataset_fingerprint,
             config.related_manifest_fingerprint,
@@ -185,7 +189,7 @@ def _validate_json(payload: dict[str, object], schema_path: Path) -> None:
         )
 
 
-def _runtime_environment(torch: Any) -> dict[str, object]:
+def _runtime_environment(torch: Any, device_name: str) -> dict[str, object]:
     return {
         "os": platform.platform(),
         "architecture": platform.machine(),
@@ -197,7 +201,10 @@ def _runtime_environment(torch: Any) -> dict[str, object]:
         "cpu": platform.processor() or "unavailable",
         "torch_threads": int(torch.get_num_threads()),
         "torch_interop_threads": int(torch.get_num_interop_threads()),
-        "device": "cpu",
+        "device": device_name,
+        "gpu": torch.cuda.get_device_name(0) if device_name == "cuda" else None,
+        "cuda": torch.version.cuda,
+        "cudnn": torch.backends.cudnn.version(),
         "deterministic_settings": {
             "torch_deterministic_algorithms": True,
             "cudnn_deterministic": True,
@@ -290,6 +297,10 @@ def run_official_evaluation(paths: OfficialPaths) -> dict[str, object]:
     raw_training, training, split_config, preprocessing = _training_components(
         paths.training_config
     )
+    torch_raw, _ = load_training_runtime()
+    torch = cast(Any, torch_raw)
+    if official.execution_device == "cuda" and not torch.cuda.is_available():
+        raise ValueError("official CUDA execution device is unavailable")
     split = deterministic_group_split(audit.samples, split_config)
     if split.fingerprint != official.split_fingerprint:
         raise ValueError("split fingerprint differs from approved AGM-030 evidence")
@@ -304,7 +315,7 @@ def run_official_evaluation(paths: OfficialPaths) -> dict[str, object]:
         config=training,
         preprocessing=preprocessing,
         model_destination=paths.artifact,
-        device_name="cpu",
+        device_name=official.execution_device,
     )
     validation_scores = score_partition(
         dataset_root=paths.dataset_root,
@@ -314,6 +325,7 @@ def run_official_evaluation(paths: OfficialPaths) -> dict[str, object]:
         config=training,
         preprocessing=preprocessing,
         model_path=paths.artifact,
+        device_name=official.execution_device,
     )
     validation_fingerprint = score_fingerprint(validation_scores, Partition.VALIDATION)
     threshold = select_threshold_from_validation(
@@ -372,13 +384,12 @@ def run_official_evaluation(paths: OfficialPaths) -> dict[str, object]:
         config=training,
         preprocessing=preprocessing,
         model_path=paths.artifact,
+        device_name=official.execution_device,
     )
     test_report = evaluate_frozen_test(
         HeldOutTestScores(test_scores.expected, test_scores.anomaly_softmax_probabilities), frozen
     )
     test_duration = time.perf_counter() - test_started
-    torch_raw, _ = load_training_runtime()
-    torch = cast(Any, torch_raw)
     evidence: dict[str, object] = {
         "schema_version": 1,
         "model": {
@@ -448,7 +459,7 @@ def run_official_evaluation(paths: OfficialPaths) -> dict[str, object]:
             "scientific_git_revision": git.revision,
             "git_dirty_at_start": git.dirty,
             "completed_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
-            "runtime": _runtime_environment(torch),
+            "runtime": _runtime_environment(torch, official.execution_device),
         },
         "limitations": [
             "PlantVillage uses predominantly controlled imagery and does not establish "

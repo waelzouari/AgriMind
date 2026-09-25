@@ -21,6 +21,7 @@ def test_official_config_is_strict_and_pins_expected_identities(tmp_path: Path) 
         "model_version": "1.0.0",
         "artifact_filename": "model.pt",
         "release_tag": "release-v1",
+        "execution_device": "cuda",
         "dataset_fingerprint": "a" * 64,
         "related_manifest_fingerprint": "b" * 64,
         "split_fingerprint": "c" * 64,

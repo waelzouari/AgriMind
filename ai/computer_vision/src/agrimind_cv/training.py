@@ -290,8 +290,9 @@ def score_partition(
     config: TrainingConfig,
     preprocessing: PreprocessingContract,
     model_path: Path,
+    device_name: str = "cpu",
 ) -> PartitionScores:
-    """Score one deterministic partition with an already frozen CPU artifact."""
+    """Score one deterministic partition with an already frozen artifact."""
     torch, torchvision = _runtime()
     selected = tuple(
         sorted(
@@ -302,10 +303,12 @@ def score_partition(
     if not selected:
         raise ValueError(f"{partition.value} partition must not be empty")
 
+    device = torch.device(device_name)
     model = torchvision.models.mobilenet_v2(weights=None)
     model.classifier[-1] = torch.nn.Linear(model.classifier[-1].in_features, 2)
     state = torch.load(model_path, map_location="cpu", weights_only=True)
     model.load_state_dict(state, strict=True)
+    model.to(device)
     model.eval()
 
     probabilities: list[float] = []
@@ -317,7 +320,7 @@ def score_partition(
             for sample in batch:
                 with Image.open(sample.resolved_path(dataset_root)) as image:
                     tensors.append(torch.from_numpy(preprocess_evaluation(image, preprocessing)))
-            logits = model(torch.stack(tensors))
+            logits = model(torch.stack(tensors).to(device))
             if tuple(logits.shape) != (len(batch), 2):
                 raise RuntimeError("frozen model output shape is invalid")
             probabilities.extend(float(value) for value in torch.softmax(logits, dim=1)[:, 1])

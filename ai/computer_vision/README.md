@@ -166,9 +166,11 @@ pending Phase B2. No final evaluation result is claimed by the B1 code or tests.
 
 ## AGM-031 official evaluation command
 
-The one-way `official-evaluate` command must start from a clean Git revision.
+The one-way `official-evaluate` command must start from a clean Git revision
+and a CUDA-capable Google Colab runtime.
 It verifies the pinned archive, reproduces the audit and split fingerprints,
-trains MobileNetV2 on CPU, selects the threshold from VALIDATION, freezes and
+trains MobileNetV2 on the versioned CUDA device, selects the threshold from
+VALIDATION, freezes and
 verifies the runtime manifest, writes a local TEST-opening marker, and only then
 scores TEST. Existing outputs cause a fail-closed refusal, preventing an
 accidental official rerun.

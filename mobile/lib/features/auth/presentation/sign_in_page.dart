@@ -43,9 +43,8 @@ class _SignInPageState extends State<SignInPage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            const SizedBox(height: AgriMindSpacing.xl),
-            const Center(child: AgriMindLogo()),
-            const SizedBox(height: AgriMindSpacing.xl),
+            const AgriMindLandscape(height: 260, child: AgriMindLogo()),
+            const SizedBox(height: AgriMindSpacing.lg),
             AgriMindCard(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -123,7 +122,8 @@ class _SignInPageState extends State<SignInPage> {
                 ],
               ),
             ),
-            const SizedBox(height: AgriMindSpacing.xl),
+            const SizedBox(height: AgriMindSpacing.lg),
+            const AgriMindLandscape(height: 96),
           ],
         ),
       ),

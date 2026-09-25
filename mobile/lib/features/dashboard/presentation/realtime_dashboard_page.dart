@@ -33,17 +33,7 @@ class RealtimeDashboardPage extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
     builder: (context, _) => AgriMindScaffold(
-      title: 'AgriMind',
       scrollable: true,
-      actions: [
-        IconButton(
-          tooltip: 'Se déconnecter',
-          onPressed: authentication.isSubmitting
-              ? null
-              : authentication.signOut,
-          icon: const Icon(Icons.logout_rounded),
-        ),
-      ],
       bottomNavigationBar: FarmNavigationBar(
         selectedIndex: 0,
         onHome: () {},
@@ -53,13 +43,33 @@ class RealtimeDashboardPage extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: AgriMindLogo(compact: true),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Bonjour,', style: AgriMindTypography.bodySecondary),
+                    Text(farm.name, style: AgriMindTypography.heading1),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Se déconnecter',
+                onPressed: authentication.isSubmitting
+                    ? null
+                    : authentication.signOut,
+                icon: const CircleAvatar(
+                  backgroundColor: AgriMindColors.primaryContainer,
+                  child: Icon(
+                    Icons.person_outline_rounded,
+                    color: AgriMindColors.primaryDark,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: AgriMindSpacing.lg),
-          Text('Bonjour,', style: AgriMindTypography.bodySecondary),
-          Text(farm.name, style: AgriMindTypography.heading2),
           const SizedBox(height: AgriMindSpacing.md),
           Align(
             alignment: Alignment.centerLeft,

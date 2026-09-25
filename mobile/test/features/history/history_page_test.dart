@@ -89,10 +89,10 @@ void main() {
     );
     await tester.pumpWidget(_app(repository, demo: true));
     await tester.pumpAndSettle();
-    expect(find.text('Capteurs'), findsNWidgets(2));
-    expect(find.text('Irrigation'), findsNWidgets(2));
-    expect(find.text('Inspections visuelles'), findsOneWidget);
-    expect(find.text('ANOMALY'), findsOneWidget);
+    expect(find.text('Capteurs'), findsOneWidget);
+    expect(find.text('Irrigation'), findsOneWidget);
+    expect(find.text('Inspections'), findsOneWidget);
+    expect(find.textContaining('Inspection — ANOMALY'), findsOneWidget);
     expect(find.textContaining('score non calibré'), findsOneWidget);
     expect(find.textContaining('événements sont simulés'), findsOneWidget);
     expect(find.textContaining('maladie'), findsNothing);
@@ -121,7 +121,12 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Aucun événement'), findsNWidgets(2));
+    await tester.tap(find.text('Irrigation'));
+    await tester.pumpAndSettle();
+    expect(find.text('Aucun événement'), findsOneWidget);
+    await tester.tap(find.text('Inspections'));
+    await tester.pumpAndSettle();
+    expect(find.text('Aucun événement'), findsOneWidget);
   });
 
   testWidgets('shows an error and recovers on retry', (tester) async {
@@ -143,7 +148,7 @@ void main() {
     );
     await tester.tap(find.text('Réessayer'));
     await tester.pumpAndSettle();
-    expect(find.text('Température'), findsOneWidget);
+    expect(find.textContaining('Température : 24 °C'), findsOneWidget);
     expect(repository.calls, 2);
   });
 }

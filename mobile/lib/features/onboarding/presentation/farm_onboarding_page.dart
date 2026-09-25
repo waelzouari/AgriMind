@@ -66,7 +66,14 @@ class _FarmOnboardingPageState extends State<FarmOnboardingPage> {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: AgriMindSpacing.xl),
-            const _FarmVisual(),
+            const AgriMindLandscape(
+              height: 190,
+              child: Icon(
+                Icons.cottage_rounded,
+                size: 72,
+                color: AgriMindColors.earthBrown,
+              ),
+            ),
             const SizedBox(height: AgriMindSpacing.xl),
             AgriMindCard(
               child: Column(
@@ -95,39 +102,6 @@ class _FarmOnboardingPageState extends State<FarmOnboardingPage> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _FarmVisual extends StatelessWidget {
-  const _FarmVisual();
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Illustration décorative de ferme',
-      image: true,
-      child: Container(
-        height: 112,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [AgriMindColors.primaryContainer, AgriMindColors.sandBeige],
-          ),
-          borderRadius: BorderRadius.circular(AgriMindRadius.card),
-          border: Border.all(color: AgriMindColors.outline),
-        ),
-        child: const ExcludeSemantics(
-          child: Center(
-            child: Icon(
-              Icons.landscape_rounded,
-              size: 64,
-              color: AgriMindColors.primaryGreen,
-            ),
-          ),
         ),
       ),
     );

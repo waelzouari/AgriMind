@@ -22,7 +22,11 @@ from agrimind_cv.baseline import (
 )
 from agrimind_cv.config import DatasetConfig, SplitConfig
 from agrimind_cv.contracts import LABEL_MAP_VERSION, SourceVerificationStatus
-from agrimind_cv.official_evaluation import OfficialPaths, run_official_evaluation
+from agrimind_cv.official_evaluation import (
+    OfficialPaths,
+    complete_official_test,
+    prepare_official_evaluation,
+)
 from agrimind_cv.preprocessing import PreprocessingContract
 from agrimind_cv.provenance import file_digest, verify_source
 from agrimind_cv.selection import BASELINE_ID, select_model
@@ -55,19 +59,21 @@ def parser() -> argparse.ArgumentParser:
     train.add_argument("--metadata", type=Path, required=True)
     train.add_argument("--artifact-id", required=True)
     train.add_argument("--artifact-version", required=True)
-    official = commands.add_parser("official-evaluate")
-    official.add_argument("--dataset-config", type=Path, required=True)
-    official.add_argument("--training-config", type=Path, required=True)
-    official.add_argument("--official-config", type=Path, required=True)
-    official.add_argument("--dataset-root", type=Path, required=True)
-    official.add_argument("--source-archive", type=Path, required=True)
-    official.add_argument("--audit-report", type=Path, required=True)
-    official.add_argument("--related-manifest", type=Path, required=True)
-    official.add_argument("--split-manifest", type=Path, required=True)
-    official.add_argument("--model", type=Path, required=True)
-    official.add_argument("--runtime-manifest", type=Path, required=True)
-    official.add_argument("--evaluation-report", type=Path, required=True)
-    official.add_argument("--test-opening-marker", type=Path, required=True)
+    for name in ("official-prepare", "official-test"):
+        official = commands.add_parser(name)
+        official.add_argument("--dataset-config", type=Path, required=True)
+        official.add_argument("--training-config", type=Path, required=True)
+        official.add_argument("--official-config", type=Path, required=True)
+        official.add_argument("--dataset-root", type=Path, required=True)
+        official.add_argument("--source-archive", type=Path, required=True)
+        official.add_argument("--audit-report", type=Path, required=True)
+        official.add_argument("--related-manifest", type=Path, required=True)
+        official.add_argument("--split-manifest", type=Path, required=True)
+        official.add_argument("--model", type=Path, required=True)
+        official.add_argument("--pretest-evidence", type=Path, required=True)
+        official.add_argument("--runtime-manifest", type=Path, required=True)
+        official.add_argument("--evaluation-report", type=Path, required=True)
+        official.add_argument("--test-opening-marker", type=Path, required=True)
     return result
 
 
@@ -166,27 +172,30 @@ def _sha(path: Path) -> str:
 
 def main(arguments: Sequence[str] | None = None) -> int:
     args = parser().parse_args(arguments)
-    if args.command == "official-evaluate":
-        payload = run_official_evaluation(
-            OfficialPaths(
-                dataset_config=args.dataset_config,
-                training_config=args.training_config,
-                official_config=args.official_config,
-                dataset_root=args.dataset_root,
-                source_archive=args.source_archive,
-                audit_report=args.audit_report,
-                related_manifest=args.related_manifest,
-                split_manifest=args.split_manifest,
-                artifact=args.model,
-                runtime_manifest=args.runtime_manifest,
-                evaluation_report=args.evaluation_report,
-                test_opening_marker=args.test_opening_marker,
-                runtime_schema=ROOT
-                / "ai/computer_vision/data_contracts/runtime-model.v1.schema.json",
-                evaluation_schema=ROOT
-                / "ai/computer_vision/data_contracts/official-evaluation.v1.schema.json",
-                repository_root=ROOT,
-            )
+    if args.command in {"official-prepare", "official-test"}:
+        paths = OfficialPaths(
+            dataset_config=args.dataset_config,
+            training_config=args.training_config,
+            official_config=args.official_config,
+            dataset_root=args.dataset_root,
+            source_archive=args.source_archive,
+            audit_report=args.audit_report,
+            related_manifest=args.related_manifest,
+            split_manifest=args.split_manifest,
+            artifact=args.model,
+            pretest_evidence=args.pretest_evidence,
+            runtime_manifest=args.runtime_manifest,
+            evaluation_report=args.evaluation_report,
+            test_opening_marker=args.test_opening_marker,
+            runtime_schema=ROOT / "ai/computer_vision/data_contracts/runtime-model.v1.schema.json",
+            evaluation_schema=ROOT
+            / "ai/computer_vision/data_contracts/official-evaluation.v1.schema.json",
+            repository_root=ROOT,
+        )
+        payload = (
+            prepare_official_evaluation(paths)
+            if args.command == "official-prepare"
+            else complete_official_test(paths)
         )
         print(json.dumps(payload, indent=2, sort_keys=True))
         return 0

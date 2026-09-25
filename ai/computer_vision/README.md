@@ -166,17 +166,16 @@ pending Phase B2. No final evaluation result is claimed by the B1 code or tests.
 
 ## AGM-031 official evaluation command
 
-The one-way `official-evaluate` command must start from a clean Git revision
-and a CUDA-capable Google Colab runtime.
-It verifies the pinned archive, reproduces the audit and split fingerprints,
-trains MobileNetV2 on the versioned CUDA device, selects the threshold from
-VALIDATION, freezes and
-verifies the runtime manifest, writes a local TEST-opening marker, and only then
-scores TEST. Existing outputs cause a fail-closed refusal, preventing an
-accidental official rerun.
+The two-phase official workflow must start from a clean Git revision and a
+CUDA-capable Google Colab runtime. `official-prepare` verifies the pinned
+archive, reproduces the audit and split fingerprints, trains MobileNetV2,
+selects the threshold from VALIDATION, and freezes the artifact and runtime
+manifest without reading TEST. Only after a separate human checkpoint may
+`official-test` revalidate every identity, create the TEST-opening marker, and
+score TEST once. Existing outputs cause a fail-closed refusal.
 
 ```bash
-python -m agrimind_cv.cli official-evaluate \
+python -m agrimind_cv.cli official-prepare \
   --dataset-config ai/computer_vision/configs/datasets/plantvillage-notebook-mirror-v1.json \
   --training-config ai/computer_vision/configs/training/mobilenet-v2-v1.json \
   --official-config ai/computer_vision/configs/evaluation/mobilenet-v2-v1.json \
@@ -186,10 +185,16 @@ python -m agrimind_cv.cli official-evaluate \
   --related-manifest ai/computer_vision/data/interim/agm-031-related.jsonl \
   --split-manifest ai/computer_vision/data/interim/agm-031-split.jsonl \
   --model ai/computer_vision/artifacts/agrimind-cv-mobilenet-v2-v1.pt \
+  --pretest-evidence ai/computer_vision/artifacts/agm-031-pretest.json \
   --runtime-manifest ai/computer_vision/evaluation/mobilenet-v2-v1.runtime.json \
   --evaluation-report ai/computer_vision/evaluation/mobilenet-v2-v1.json \
   --test-opening-marker ai/computer_vision/artifacts/agm-031-test-opened.txt
 ```
+
+After reviewing the frozen pre-TEST evidence and explicitly authorizing the
+one-time opening, run the same arguments with `official-test`. The versioned
+Colab notebook performs this orchestration without duplicating scientific
+logic.
 
 The model weights, raw data, detailed manifests, and TEST marker remain ignored.
 Only aggregate evidence and the runtime manifest are versioned. The documented

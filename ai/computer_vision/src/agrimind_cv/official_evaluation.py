@@ -24,6 +24,7 @@ from agrimind_cv.contracts import LABEL_MAP_VERSION, Partition, Sample, SourceVe
 from agrimind_cv.evaluation import (
     FrozenEvaluationEvidence,
     HeldOutTestScores,
+    ThresholdSelection,
     ValidationScores,
     evaluate_frozen_test,
     metrics_at_threshold,
@@ -108,6 +109,7 @@ class OfficialPaths:
     related_manifest: Path
     split_manifest: Path
     artifact: Path
+    pretest_evidence: Path
     runtime_manifest: Path
     evaluation_report: Path
     test_opening_marker: Path
@@ -261,13 +263,14 @@ def _training_components(
     return raw, training, split, preprocessing
 
 
-def run_official_evaluation(paths: OfficialPaths) -> dict[str, object]:
-    """Execute the irreversible official pipeline; TEST opens only after freeze."""
+def prepare_official_evaluation(paths: OfficialPaths) -> dict[str, object]:
+    """Train, select on VALIDATION, and freeze without opening TEST."""
     destinations = (
         paths.audit_report,
         paths.related_manifest,
         paths.split_manifest,
         paths.artifact,
+        paths.pretest_evidence,
         paths.runtime_manifest,
         paths.evaluation_report,
         paths.test_opening_marker,
@@ -356,41 +359,7 @@ def run_official_evaluation(paths: OfficialPaths) -> dict[str, object]:
     parsed_manifest = load_runtime_manifest(pretest_manifest, paths.runtime_schema)
     verify_artifact(parsed_manifest, paths.artifact)
 
-    frozen = FrozenEvaluationEvidence(
-        artifact_sha,
-        official.model_version,
-        preprocessing.contract_version,
-        threshold,
-    )
-    if (
-        not all((frozen.model_frozen, frozen.preprocessing_frozen, frozen.threshold_frozen))
-        or threshold.rule_version != official.threshold_rule_version
-        or audit.dataset_fingerprint != official.dataset_fingerprint
-        or split.fingerprint != official.split_fingerprint
-        or LABEL_MAP_VERSION != "agrimind-cv-binary-label-map-v1"
-        or not git.revision
-    ):
-        raise ValueError("held-out TEST opening gate failed")
-
-    paths.test_opening_marker.parent.mkdir(parents=True, exist_ok=True)
-    with paths.test_opening_marker.open("x", encoding="utf-8") as marker:
-        marker.write(f"opened_at={datetime.now(UTC).isoformat()}\nrevision={git.revision}\n")
-    test_started = time.perf_counter()
-    test_scores = score_partition(
-        dataset_root=paths.dataset_root,
-        samples=audit.eligible_samples,
-        split=split,
-        partition=Partition.TEST,
-        config=training,
-        preprocessing=preprocessing,
-        model_path=paths.artifact,
-        device_name=official.execution_device,
-    )
-    test_report = evaluate_frozen_test(
-        HeldOutTestScores(test_scores.expected, test_scores.anomaly_softmax_probabilities), frozen
-    )
-    test_duration = time.perf_counter() - test_started
-    evidence: dict[str, object] = {
+    pretest: dict[str, object] = {
         "schema_version": 1,
         "model": {
             "version": official.model_version,
@@ -446,19 +415,16 @@ def run_official_evaluation(paths: OfficialPaths) -> dict[str, object]:
             ),
             "scoring_duration_seconds": validation_scores.duration_seconds,
         },
-        "test": {
-            "opened_once_after_freeze": True,
-            "sample_count": test_report.sample_count,
-            "metrics": asdict(test_report.metrics),
-            "roc_auc": test_report.roc_auc,
-            "average_precision": test_report.average_precision,
-            "evaluation_duration_seconds": test_duration,
-            "error_analysis": _error_summary(test_scores, threshold.threshold),
+        "freeze": {
+            "model_frozen": True,
+            "preprocessing_frozen": True,
+            "threshold_frozen": True,
+            "test_opened": False,
         },
         "execution": {
             "scientific_git_revision": git.revision,
             "git_dirty_at_start": git.dirty,
-            "completed_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
+            "prepared_at": datetime.now(UTC).isoformat().replace("+00:00", "Z"),
             "runtime": _runtime_environment(torch, official.execution_device),
         },
         "limitations": [
@@ -468,12 +434,122 @@ def run_official_evaluation(paths: OfficialPaths) -> dict[str, object]:
             "NORMAL/ANOMALY is visual screening, not disease diagnosis.",
         ],
     }
+    _write_once(paths.pretest_evidence, pretest)
+    return pretest
+
+
+def complete_official_test(paths: OfficialPaths) -> dict[str, object]:
+    """Open held-out TEST once, after independently rechecking the frozen evidence."""
+    if paths.test_opening_marker.exists():
+        raise FileExistsError("TEST opening marker already exists; refusing to reopen TEST")
+    if paths.evaluation_report.exists() or paths.runtime_manifest.exists():
+        raise FileExistsError("final official output already exists; refusing to overwrite")
+    git = repository_git_state(paths.repository_root)
+    try:
+        pretest = json.loads(paths.pretest_evidence.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as error:
+        raise ValueError("pre-TEST frozen evidence is unreadable") from error
+    if not isinstance(pretest, dict):
+        raise ValueError("pre-TEST frozen evidence must be an object")
+    execution = pretest.get("execution")
+    freeze = pretest.get("freeze")
+    if not isinstance(execution, dict) or execution.get("scientific_git_revision") != git.revision:
+        raise ValueError("scientific Git revision differs from frozen evidence")
+    if freeze != {
+        "model_frozen": True,
+        "preprocessing_frozen": True,
+        "threshold_frozen": True,
+        "test_opened": False,
+    }:
+        raise ValueError("pre-TEST freeze gate is incomplete")
+
+    official = OfficialConfig.load(paths.official_config)
+    dataset = DatasetConfig.load(paths.dataset_config)
+    source = verify_source(paths.dataset_root, dataset, archive=paths.source_archive)
+    if source.status != SourceVerificationStatus.VERIFIED:
+        raise ValueError("official dataset source is not VERIFIED")
+    audit = audit_dataset(paths.dataset_root, dataset, source_evidence=source)
+    raw_training, training, split_config, preprocessing = _training_components(
+        paths.training_config
+    )
+    del raw_training
+    split = deterministic_group_split(audit.samples, split_config)
+    assert_no_candidate_leakage(audit.samples, audit.near_duplicate_candidates, split)
+    assert_no_content_leakage(audit.samples, split)
+    if (
+        audit.dataset_fingerprint != official.dataset_fingerprint
+        or audit.related_manifest_fingerprint != official.related_manifest_fingerprint
+        or split.fingerprint != official.split_fingerprint
+        or LABEL_MAP_VERSION != "agrimind-cv-binary-label-map-v1"
+    ):
+        raise ValueError("held-out TEST identity gate failed")
+
+    pretest_manifest = paths.artifact.with_suffix(".runtime.json")
+    manifest = load_runtime_manifest(pretest_manifest, paths.runtime_schema)
+    verify_artifact(manifest, paths.artifact)
+    model = pretest.get("model")
+    validation = pretest.get("validation")
+    if not isinstance(model, dict) or not isinstance(validation, dict):
+        raise ValueError("pre-TEST model or validation evidence is missing")
+    if (
+        manifest.dataset_fingerprint != official.dataset_fingerprint
+        or manifest.split_fingerprint != official.split_fingerprint
+        or manifest.validation_fingerprint != validation.get("fingerprint")
+        or manifest.decision_threshold != validation.get("threshold")
+    ):
+        raise ValueError("runtime manifest disagrees with frozen pre-TEST evidence")
+    torch_raw, _ = load_training_runtime()
+    torch = cast(Any, torch_raw)
+    if official.execution_device == "cuda" and not torch.cuda.is_available():
+        raise ValueError("official CUDA execution device is unavailable")
+    frozen = FrozenEvaluationEvidence(
+        manifest.artifact_sha256,
+        manifest.model_version,
+        manifest.preprocessing_version,
+        ThresholdSelection(
+            manifest.decision_threshold,
+            str(validation.get("threshold_policy")),
+            manifest.validation_fingerprint,
+            metrics_at_threshold(("NORMAL", "ANOMALY"), (0.0, 1.0), 0.5),
+        ),
+    )
+    paths.test_opening_marker.parent.mkdir(parents=True, exist_ok=True)
+    with paths.test_opening_marker.open("x", encoding="utf-8") as marker:
+        marker.write(f"opened_at={datetime.now(UTC).isoformat()}\nrevision={git.revision}\n")
+    test_started = time.perf_counter()
+    test_scores = score_partition(
+        dataset_root=paths.dataset_root,
+        samples=audit.eligible_samples,
+        split=split,
+        partition=Partition.TEST,
+        config=training,
+        preprocessing=preprocessing,
+        model_path=paths.artifact,
+        device_name=official.execution_device,
+    )
+    test_report = evaluate_frozen_test(
+        HeldOutTestScores(test_scores.expected, test_scores.anomaly_softmax_probabilities), frozen
+    )
+    evidence = dict(pretest)
+    evidence.pop("freeze", None)
+    evidence["test"] = {
+        "opened_once_after_freeze": True,
+        "sample_count": test_report.sample_count,
+        "metrics": asdict(test_report.metrics),
+        "roc_auc": test_report.roc_auc,
+        "average_precision": test_report.average_precision,
+        "evaluation_duration_seconds": time.perf_counter() - test_started,
+        "error_analysis": _error_summary(test_scores, manifest.decision_threshold),
+    }
+    execution = dict(cast(dict[str, object], evidence["execution"]))
+    execution["completed_at"] = datetime.now(UTC).isoformat().replace("+00:00", "Z")
+    evidence["execution"] = execution
     _validate_json(evidence, paths.evaluation_schema)
-    _write_once(paths.runtime_manifest, runtime_manifest)
+    runtime_payload = asdict(manifest)
+    _write_once(paths.runtime_manifest, runtime_payload)
     _write_once(paths.evaluation_report, evidence)
 
-    # The same strict, network-free runtime loader used by the service must accept the artifact.
-    loaded = load_mobilenet_v2(parsed_manifest, paths.artifact)
+    loaded = load_mobilenet_v2(manifest, paths.artifact)
     synthetic = preprocess_evaluation(
         Image.new("RGB", (224, 224), color=(127, 127, 127)), preprocessing
     )

@@ -163,3 +163,33 @@ artifact before loading a strict state dict, and never downloads weights.
 
 Official clean weights, the selected threshold and held-out TEST metrics remain
 pending Phase B2. No final evaluation result is claimed by the B1 code or tests.
+
+## AGM-031 official evaluation command
+
+The one-way `official-evaluate` command must start from a clean Git revision.
+It verifies the pinned archive, reproduces the audit and split fingerprints,
+trains MobileNetV2 on CPU, selects the threshold from VALIDATION, freezes and
+verifies the runtime manifest, writes a local TEST-opening marker, and only then
+scores TEST. Existing outputs cause a fail-closed refusal, preventing an
+accidental official rerun.
+
+```bash
+python -m agrimind_cv.cli official-evaluate \
+  --dataset-config ai/computer_vision/configs/datasets/plantvillage-notebook-mirror-v1.json \
+  --training-config ai/computer_vision/configs/training/mobilenet-v2-v1.json \
+  --official-config ai/computer_vision/configs/evaluation/mobilenet-v2-v1.json \
+  --dataset-root ai/computer_vision/data/raw/plantvillage-notebook-mirror \
+  --source-archive ai/computer_vision/data/raw/PlantVillage-Dataset-825c387b026b01570caa85ab7fdba5cb594adab0.zip \
+  --audit-report ai/computer_vision/data/interim/agm-031-audit.json \
+  --related-manifest ai/computer_vision/data/interim/agm-031-related.jsonl \
+  --split-manifest ai/computer_vision/data/interim/agm-031-split.jsonl \
+  --model ai/computer_vision/artifacts/agrimind-cv-mobilenet-v2-v1.pt \
+  --runtime-manifest ai/computer_vision/evaluation/mobilenet-v2-v1.runtime.json \
+  --evaluation-report ai/computer_vision/evaluation/mobilenet-v2-v1.json \
+  --test-opening-marker ai/computer_vision/artifacts/agm-031-test-opened.txt
+```
+
+The model weights, raw data, detailed manifests, and TEST marker remain ignored.
+Only aggregate evidence and the runtime manifest are versioned. The documented
+distribution target is a GitHub Release asset; no alternative storage backend
+is introduced by AGM-031.

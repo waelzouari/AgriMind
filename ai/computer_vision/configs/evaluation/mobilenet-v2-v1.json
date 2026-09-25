@@ -1,0 +1,10 @@
+{
+  "schema_version": 1,
+  "model_version": "1.0.0",
+  "artifact_filename": "agrimind-cv-mobilenet-v2-v1.pt",
+  "release_tag": "agm-031-cv-mobilenet-v2-v1",
+  "dataset_fingerprint": "e7bbae54f67cd2226f565a50d814c63fcc3457024c17ab7730dbd76d4d4d82ae",
+  "related_manifest_fingerprint": "a8260d72d8644f26f4cb8f5e33c704088496720ce2cd28df8b19898256814a17",
+  "split_fingerprint": "a22f57a547ff2a7ccb0d9c5539ffa2d036cde6eb95e83865b7c9dc23b6a18acf",
+  "threshold_rule_version": "agrimind-cv-validation-threshold-v1"
+}

@@ -79,6 +79,15 @@ class TrainingOutcome:
     device: str
 
 
+@dataclass(frozen=True, slots=True)
+class PartitionScores:
+    relative_paths: tuple[str, ...]
+    source_labels: tuple[str, ...]
+    expected: tuple[str, ...]
+    anomaly_softmax_probabilities: tuple[float, ...]
+    duration_seconds: float
+
+
 def load_training_runtime() -> tuple[object, object]:
     try:
         return importlib.import_module("torch"), importlib.import_module("torchvision")
@@ -101,6 +110,7 @@ def train_and_validate(
     config: TrainingConfig,
     preprocessing: PreprocessingContract,
     model_destination: Path,
+    device_name: str | None = None,
 ) -> TrainingOutcome:
     """Train MobileNetV2 and report validation evidence for AGM-030.
 
@@ -119,7 +129,9 @@ def train_and_validate(
         torch.backends.cudnn.benchmark = False
     if hasattr(torch, "use_deterministic_algorithms"):
         torch.use_deterministic_algorithms(True)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = torch.device(
+        device_name if device_name is not None else ("cuda" if torch.cuda.is_available() else "cpu")
+    )
     label_index = {
         CanonicalLabel.NORMAL: 0,
         CanonicalLabel.ANOMALY: 1,
@@ -266,6 +278,55 @@ def train_and_validate(
         class_weights=(float(class_weights[0].item()), float(class_weights[1].item())),
         duration_seconds=time.perf_counter() - started,
         device=str(device),
+    )
+
+
+def score_partition(
+    *,
+    dataset_root: Path,
+    samples: tuple[Sample, ...],
+    split: SplitResult,
+    partition: Partition,
+    config: TrainingConfig,
+    preprocessing: PreprocessingContract,
+    model_path: Path,
+) -> PartitionScores:
+    """Score one deterministic partition with an already frozen CPU artifact."""
+    torch, torchvision = _runtime()
+    selected = tuple(
+        sorted(
+            (sample for sample in samples if split.assignments[sample.relative_path] == partition),
+            key=lambda sample: sample.relative_path,
+        )
+    )
+    if not selected:
+        raise ValueError(f"{partition.value} partition must not be empty")
+
+    model = torchvision.models.mobilenet_v2(weights=None)
+    model.classifier[-1] = torch.nn.Linear(model.classifier[-1].in_features, 2)
+    state = torch.load(model_path, map_location="cpu", weights_only=True)
+    model.load_state_dict(state, strict=True)
+    model.eval()
+
+    probabilities: list[float] = []
+    started = time.perf_counter()
+    with torch.no_grad():
+        for offset in range(0, len(selected), config.batch_size):
+            batch = selected[offset : offset + config.batch_size]
+            tensors = []
+            for sample in batch:
+                with Image.open(sample.resolved_path(dataset_root)) as image:
+                    tensors.append(torch.from_numpy(preprocess_evaluation(image, preprocessing)))
+            logits = model(torch.stack(tensors))
+            if tuple(logits.shape) != (len(batch), 2):
+                raise RuntimeError("frozen model output shape is invalid")
+            probabilities.extend(float(value) for value in torch.softmax(logits, dim=1)[:, 1])
+    return PartitionScores(
+        relative_paths=tuple(sample.relative_path for sample in selected),
+        source_labels=tuple(sample.source_label for sample in selected),
+        expected=tuple(sample.canonical_label.value for sample in selected),
+        anomaly_softmax_probabilities=tuple(probabilities),
+        duration_seconds=time.perf_counter() - started,
     )
 
 

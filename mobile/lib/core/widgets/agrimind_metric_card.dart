@@ -44,7 +44,7 @@ class AgriMindMetricCard extends StatelessWidget {
               ?trailing,
             ],
           ),
-          const SizedBox(height: AgriMindSpacing.md),
+          const SizedBox(height: AgriMindSpacing.sm),
           Wrap(
             crossAxisAlignment: WrapCrossAlignment.end,
             spacing: AgriMindSpacing.xs,

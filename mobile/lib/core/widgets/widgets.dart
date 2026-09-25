@@ -2,6 +2,7 @@ export 'agrimind_button.dart';
 export 'agrimind_card.dart';
 export 'agrimind_empty_state.dart';
 export 'agrimind_error_state.dart';
+export 'agrimind_landscape.dart';
 export 'agrimind_loading_indicator.dart';
 export 'agrimind_logo.dart';
 export 'agrimind_metric_card.dart';

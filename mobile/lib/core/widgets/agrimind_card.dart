@@ -4,9 +4,10 @@ import 'package:flutter/material.dart';
 class AgriMindCard extends StatelessWidget {
   const AgriMindCard({
     required this.child,
-    this.padding = const EdgeInsets.all(AgriMindSpacing.lg),
+    this.padding = const EdgeInsets.all(AgriMindSpacing.md),
     this.onTap,
     this.semanticLabel,
+    this.backgroundColor,
     super.key,
   });
 
@@ -14,6 +15,7 @@ class AgriMindCard extends StatelessWidget {
   final EdgeInsetsGeometry padding;
   final VoidCallback? onTap;
   final String? semanticLabel;
+  final Color? backgroundColor;
 
   @override
   Widget build(BuildContext context) {
@@ -24,6 +26,7 @@ class AgriMindCard extends StatelessWidget {
       child: Padding(padding: padding, child: child),
     );
     final card = Card(
+      color: backgroundColor,
       clipBehavior: Clip.antiAlias,
       child: onTap == null ? content : InkWell(onTap: onTap, child: content),
     );

@@ -16,6 +16,7 @@ class FarmNavigationBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => NavigationBar(
+    labelBehavior: NavigationDestinationLabelBehavior.alwaysShow,
     selectedIndex: selectedIndex,
     onDestinationSelected: (index) => switch (index) {
       0 => onHome(),

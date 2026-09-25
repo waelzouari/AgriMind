@@ -33,17 +33,7 @@ class RealtimeDashboardPage extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: controller,
     builder: (context, _) => AgriMindScaffold(
-      title: 'AgriMind',
       scrollable: true,
-      actions: [
-        IconButton(
-          tooltip: 'Se déconnecter',
-          onPressed: authentication.isSubmitting
-              ? null
-              : authentication.signOut,
-          icon: const Icon(Icons.logout_rounded),
-        ),
-      ],
       bottomNavigationBar: FarmNavigationBar(
         selectedIndex: 0,
         onHome: () {},
@@ -53,17 +43,79 @@ class RealtimeDashboardPage extends StatelessWidget {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: AgriMindLogo(compact: true),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Bonjour,', style: AgriMindTypography.bodySecondary),
+                    Text(farm.name, style: AgriMindTypography.heading1),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Se déconnecter',
+                onPressed: authentication.isSubmitting
+                    ? null
+                    : authentication.signOut,
+                icon: const CircleAvatar(
+                  backgroundColor: AgriMindColors.primaryContainer,
+                  child: Icon(
+                    Icons.person_outline_rounded,
+                    color: AgriMindColors.primaryDark,
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: AgriMindSpacing.lg),
-          Text('Bonjour,', style: AgriMindTypography.bodySecondary),
-          Text(farm.name, style: AgriMindTypography.heading2),
           const SizedBox(height: AgriMindSpacing.md),
           Align(
             alignment: Alignment.centerLeft,
             child: _ConnectionBadge(phase: controller.phase),
+          ),
+          const SizedBox(height: AgriMindSpacing.md),
+          AgriMindCard(
+            child: Row(
+              children: [
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AgriMindColors.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(AgriMindSpacing.md),
+                    child: Icon(
+                      Icons.eco_rounded,
+                      color: AgriMindColors.primaryGreen,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AgriMindSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Aperçu de la ferme',
+                        style: AgriMindTypography.label,
+                      ),
+                      const SizedBox(height: AgriMindSpacing.xs),
+                      Text(
+                        controller.phase == MqttConnectionPhase.connected
+                            ? 'Surveillance en temps réel active'
+                            : 'Surveillance en attente de connexion',
+                        style: AgriMindTypography.bodySecondary.copyWith(
+                          color: AgriMindColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
           ),
           const SizedBox(height: AgriMindSpacing.xl),
           const AgriMindSectionHeader(title: 'Capteurs en direct'),
@@ -133,7 +185,7 @@ class _DashboardBody extends StatelessWidget {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 520 ? 2 : 1;
+            final columns = constraints.maxWidth >= 340 ? 2 : 1;
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -142,7 +194,7 @@ class _DashboardBody extends StatelessWidget {
                 crossAxisCount: columns,
                 crossAxisSpacing: AgriMindSpacing.md,
                 mainAxisSpacing: AgriMindSpacing.md,
-                mainAxisExtent: columns == 1 ? 220 : 210,
+                mainAxisExtent: columns == 1 ? 220 : 240,
               ),
               itemBuilder: (context, index) => _MetricCard(
                 reading: readings[index],

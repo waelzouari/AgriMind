@@ -108,7 +108,7 @@ void main() {
     );
     await tester.pumpWidget(app(_controller(repository: repository)));
 
-    expect(find.text('Aucune image sélectionnée'), findsOneWidget);
+    expect(find.text('Importer une image de feuille'), findsOneWidget);
     await tester.tap(find.text('Sélectionner une image'));
     await tester.pumpAndSettle();
 

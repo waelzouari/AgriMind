@@ -6,12 +6,14 @@ abstract final class AgriMindColors {
   static const onPrimary = Color(0xFFFFFFFF);
   static const accentGreen = Color(0xFF34A853);
   static const primaryContainer = Color(0xFFEAF6E9);
+  static const navigationSelected = Color(0xFFDDF3DF);
+  static const decorativeGreen = Color(0xFFF0F8EC);
   static const lightGreen = primaryContainer;
   static const earthBrown = Color(0xFF6B4F3A);
   static const sandBeige = Color(0xFFF7EEDB);
   static const sandAccent = Color(0xFFE8D3A5);
-  static const background = Color(0xFFF4F9F2);
-  static const backgroundSoft = Color(0xFFFAFCF8);
+  static const background = Color(0xFFF8FBF5);
+  static const backgroundSoft = Color(0xFFFFFEFA);
   static const surface = Color(0xFFFFFFFF);
   static const surfaceMuted = Color(0xFFF7FAF6);
   static const textPrimary = Color(0xFF073B35);

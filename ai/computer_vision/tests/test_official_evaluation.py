@@ -8,7 +8,9 @@ import pytest
 from agrimind_cv.contracts import CanonicalLabel, Partition, Sample
 from agrimind_cv.official_evaluation import (
     OfficialConfig,
+    OfficialPaths,
     assert_no_content_leakage,
+    complete_official_test,
     score_fingerprint,
 )
 from agrimind_cv.split import SplitResult
@@ -70,3 +72,33 @@ def test_content_hash_may_not_cross_partitions() -> None:
     )
     with pytest.raises(ValueError, match="SHA-256"):
         assert_no_content_leakage(samples, split)
+
+
+def test_test_phase_refuses_an_existing_opening_marker(tmp_path: Path) -> None:
+    marker = tmp_path / "test-opened.txt"
+    marker.write_text("already opened", encoding="utf-8")
+    paths = OfficialPaths(
+        *(
+            tmp_path / name
+            for name in (
+                "dataset.json",
+                "training.json",
+                "official.json",
+                "dataset",
+                "source.zip",
+                "audit.json",
+                "related.jsonl",
+                "split.jsonl",
+                "model.pt",
+                "pretest.json",
+                "runtime.json",
+                "evaluation.json",
+                "test-opened.txt",
+                "runtime.schema.json",
+                "evaluation.schema.json",
+                "repository",
+            )
+        )
+    )
+    with pytest.raises(FileExistsError, match="already exists"):
+        complete_official_test(paths)

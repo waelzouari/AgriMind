@@ -6,6 +6,11 @@ import 'package:agrimind/features/farm_manager/application/farm_manager_controll
 import 'package:agrimind/features/farm_manager/application/farm_manager_repository.dart';
 import 'package:agrimind/features/farm_manager/domain/farm_tree.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
+import 'package:agrimind/features/visual_inspection/application/cv_inference_repository.dart';
+import 'package:agrimind/features/visual_inspection/application/inspection_image_source.dart';
+import 'package:agrimind/features/visual_inspection/application/inspection_image_validator.dart';
+import 'package:agrimind/features/visual_inspection/application/visual_inspection_controller.dart';
+import 'package:agrimind/features/visual_inspection/presentation/visual_inspection_page.dart';
 import 'package:flutter/material.dart';
 
 class TreeDetailPage extends StatefulWidget {
@@ -13,12 +18,16 @@ class TreeDetailPage extends StatefulWidget {
     required this.farm,
     required this.treeId,
     required this.repository,
+    this.cvInferenceRepository,
+    this.inspectionImageSource,
     super.key,
   });
 
   final Farm farm;
   final String treeId;
   final FarmManagerRepository repository;
+  final CvInferenceRepository? cvInferenceRepository;
+  final InspectionImageSource? inspectionImageSource;
 
   @override
   State<TreeDetailPage> createState() => _TreeDetailPageState();
@@ -46,15 +55,28 @@ class _TreeDetailPageState extends State<TreeDetailPage> {
     builder: (context, _) => AgriMindScaffold(
       title: _controller.tree?.label ?? 'Détail de l’arbre',
       scrollable: true,
-      body: _TreeDetailBody(controller: _controller),
+      body: _TreeDetailBody(
+        controller: _controller,
+        farm: widget.farm,
+        cvInferenceRepository: widget.cvInferenceRepository,
+        inspectionImageSource: widget.inspectionImageSource,
+      ),
     ),
   );
 }
 
 class _TreeDetailBody extends StatelessWidget {
-  const _TreeDetailBody({required this.controller});
+  const _TreeDetailBody({
+    required this.controller,
+    required this.farm,
+    required this.cvInferenceRepository,
+    required this.inspectionImageSource,
+  });
 
   final TreeDetailController controller;
+  final Farm farm;
+  final CvInferenceRepository? cvInferenceRepository;
+  final InspectionImageSource? inspectionImageSource;
 
   @override
   Widget build(BuildContext context) => switch (controller.status) {
@@ -75,14 +97,27 @@ class _TreeDetailBody extends StatelessWidget {
         onRetry: controller.retry,
       ),
     ),
-    TreeDetailStatus.loaded => _LoadedTreeDetail(tree: controller.tree!),
+    TreeDetailStatus.loaded => _LoadedTreeDetail(
+      farm: farm,
+      tree: controller.tree!,
+      cvInferenceRepository: cvInferenceRepository,
+      inspectionImageSource: inspectionImageSource,
+    ),
   };
 }
 
 class _LoadedTreeDetail extends StatelessWidget {
-  const _LoadedTreeDetail({required this.tree});
+  const _LoadedTreeDetail({
+    required this.farm,
+    required this.tree,
+    required this.cvInferenceRepository,
+    required this.inspectionImageSource,
+  });
 
+  final Farm farm;
   final FarmTree tree;
+  final CvInferenceRepository? cvInferenceRepository;
+  final InspectionImageSource? inspectionImageSource;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -155,10 +190,30 @@ class _LoadedTreeDetail extends StatelessWidget {
         ),
       ),
       const SizedBox(height: AgriMindSpacing.xl),
-      const AgriMindButton(
-        label: 'Inspecter la plante — bientôt disponible',
-        onPressed: null,
-        icon: Icons.camera_alt_outlined,
+      AgriMindButton(
+        label: cvInferenceRepository == null || inspectionImageSource == null
+            ? 'Inspection visuelle indisponible'
+            : 'Démarrer une inspection visuelle',
+        onPressed:
+            cvInferenceRepository == null || inspectionImageSource == null
+            ? null
+            : () => Navigator.of(context).push(
+                MaterialPageRoute<void>(
+                  builder: (_) => VisualInspectionPage(
+                    farm: farm,
+                    tree: tree,
+                    demonstrationMode: true,
+                    controller: VisualInspectionController(
+                      farmId: farm.id,
+                      treeId: tree.id,
+                      repository: cvInferenceRepository!,
+                      imageSource: inspectionImageSource!,
+                      validator: const DefaultInspectionImageValidator(),
+                    ),
+                  ),
+                ),
+              ),
+        icon: Icons.image_search_outlined,
       ),
     ],
   );

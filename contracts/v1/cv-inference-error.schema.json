@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agrimind.example/contracts/v1/cv-inference-error.schema.json",
+  "title": "AgriMind CV inference error v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "error"],
+  "properties": {
+    "schema_version": {"const": 1},
+    "error": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["code", "correlation_id", "message"],
+      "properties": {
+        "code": {
+          "enum": [
+            "authentication_required", "invalid_token", "farm_access_denied",
+            "invalid_request", "unsupported_image_type", "image_too_large",
+            "invalid_image", "unsupported_image_dimensions", "model_unavailable",
+            "inference_failed"
+          ]
+        },
+        "correlation_id": {"type": "string", "format": "uuid"},
+        "message": {"type": "string", "minLength": 1, "maxLength": 160}
+      }
+    }
+  }
+}

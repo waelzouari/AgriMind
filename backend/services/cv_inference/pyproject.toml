@@ -3,36 +3,31 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "agrimind-cv"
-version = "0.3.0"
-description = "AgriMind reproducible computer-vision dataset and training pipeline"
+name = "agrimind-cv-inference"
+version = "0.1.0"
+description = "Secured farm-scoped AgriMind CV inference API"
 requires-python = ">=3.11"
 dependencies = [
-  "numpy>=2.0,<3",
-  "Pillow>=11,<13",
-  "jsonschema[format]>=4.23,<5",
+  "agrimind-cv==0.3.0",
+  "fastapi==0.115.12",
+  "uvicorn==0.34.2",
+  "python-dotenv>=1.0,<2",
 ]
 
 [project.optional-dependencies]
-train = [
-  "torch==2.5.1",
-  "torchvision==0.20.1",
-]
+runtime = ["torch==2.5.1", "torchvision==0.20.1"]
 dev = [
+  "httpx>=0.27,<1",
   "mypy>=1.11,<2",
   "pytest>=8.3,<9",
   "ruff>=0.9,<1",
-  "types-jsonschema>=4.23,<5",
 ]
 
 [project.scripts]
-agrimind-cv = "agrimind_cv.cli:main"
+agrimind-cv-inference = "agrimind_cv_inference.entrypoints.service:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
-
-[tool.setuptools.package-data]
-agrimind_cv = ["py.typed"]
 
 [tool.pytest.ini_options]
 addopts = "--strict-config --strict-markers -q"

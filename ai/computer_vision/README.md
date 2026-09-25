@@ -151,3 +151,52 @@ demonstrate equivalent performance on real field images. Expected domain shift
 includes natural backgrounds, lighting, blur, occlusion, multiple leaves,
 camera differences, unseen cultivars or species, and Tunisian farm conditions.
 No quantitative field-performance or disease-diagnosis claim is made.
+
+## AGM-031 Phase B1 boundary
+
+The package now owns dependency-light binary metrics, validation-only threshold
+selection and strict runtime artifact verification. Threshold selection accepts
+only a `ValidationScores` contract; the held-out evaluator requires frozen
+model, preprocessing and threshold evidence plus validation/artifact identity.
+The runtime constructs MobileNetV2 with `weights=None`, verifies the external
+artifact before loading a strict state dict, and never downloads weights.
+
+Official clean weights, the selected threshold and held-out TEST metrics remain
+pending Phase B2. No final evaluation result is claimed by the B1 code or tests.
+
+## AGM-031 official evaluation command
+
+The two-phase official workflow must start from a clean Git revision and a
+CUDA-capable Google Colab runtime. `official-prepare` verifies the pinned
+archive, reproduces the audit and split fingerprints, trains MobileNetV2,
+selects the threshold from VALIDATION, and freezes the artifact and runtime
+manifest without reading TEST. Only after a separate human checkpoint may
+`official-test` revalidate every identity, create the TEST-opening marker, and
+score TEST once. Existing outputs cause a fail-closed refusal.
+
+```bash
+python -m agrimind_cv.cli official-prepare \
+  --dataset-config ai/computer_vision/configs/datasets/plantvillage-notebook-mirror-v1.json \
+  --training-config ai/computer_vision/configs/training/mobilenet-v2-v1.json \
+  --official-config ai/computer_vision/configs/evaluation/mobilenet-v2-v1.json \
+  --dataset-root ai/computer_vision/data/raw/plantvillage-notebook-mirror \
+  --source-archive ai/computer_vision/data/raw/PlantVillage-Dataset-825c387b026b01570caa85ab7fdba5cb594adab0.zip \
+  --audit-report ai/computer_vision/data/interim/agm-031-audit.json \
+  --related-manifest ai/computer_vision/data/interim/agm-031-related.jsonl \
+  --split-manifest ai/computer_vision/data/interim/agm-031-split.jsonl \
+  --model ai/computer_vision/artifacts/agrimind-cv-mobilenet-v2-v1.pt \
+  --pretest-evidence ai/computer_vision/artifacts/agm-031-pretest.json \
+  --runtime-manifest ai/computer_vision/evaluation/mobilenet-v2-v1.runtime.json \
+  --evaluation-report ai/computer_vision/evaluation/mobilenet-v2-v1.json \
+  --test-opening-marker ai/computer_vision/artifacts/agm-031-test-opened.txt
+```
+
+After reviewing the frozen pre-TEST evidence and explicitly authorizing the
+one-time opening, run the same arguments with `official-test`. The versioned
+Colab notebook performs this orchestration without duplicating scientific
+logic.
+
+The model weights, raw data, detailed manifests, and TEST marker remain ignored.
+Only aggregate evidence and the runtime manifest are versioned. The documented
+distribution target is a GitHub Release asset; no alternative storage backend
+is introduced by AGM-031.

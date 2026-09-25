@@ -24,8 +24,15 @@ REQUIRED_PATHS = (
     "edge/pyproject.toml",
     "ai/computer_vision/pyproject.toml",
     "ai/computer_vision/configs/datasets/plantvillage-notebook-mirror-v1.json",
+    "ai/computer_vision/configs/evaluation/mobilenet-v2-v1.json",
     "ai/computer_vision/data_contracts/artifact-metadata.v2.schema.json",
+    "ai/computer_vision/data_contracts/official-evaluation.v1.schema.json",
+    "ai/computer_vision/data_contracts/runtime-model.v1.schema.json",
+    "ai/computer_vision/notebooks/AGM_031_Official_Evaluation_Colab.ipynb",
     "ai/computer_vision/README.md",
+    "backend/services/cv_inference/pyproject.toml",
+    "contracts/v1/cv-inference-response.schema.json",
+    "contracts/v1/cv-inference-error.schema.json",
     "mobile/README.md",
 )
 FORBIDDEN_ENV_NAMES = ("SERVICE_ROLE", "PRIVATE_KEY")

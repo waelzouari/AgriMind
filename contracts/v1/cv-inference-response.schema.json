@@ -1,0 +1,27 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agrimind.example/contracts/v1/cv-inference-response.schema.json",
+  "title": "AgriMind CV inference response v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "inference_id", "correlation_id", "farm_id",
+    "classification", "anomaly_softmax_probability", "decision_threshold",
+    "model_version", "preprocessing_version", "artifact_sha256",
+    "dataset_fingerprint", "completed_at"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "inference_id": {"type": "string", "format": "uuid"},
+    "correlation_id": {"type": "string", "format": "uuid"},
+    "farm_id": {"type": "string", "format": "uuid"},
+    "classification": {"enum": ["NORMAL", "ANOMALY"]},
+    "anomaly_softmax_probability": {"type": "number", "minimum": 0, "maximum": 1},
+    "decision_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+    "model_version": {"type": "string", "minLength": 1},
+    "preprocessing_version": {"type": "string", "minLength": 1},
+    "artifact_sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "dataset_fingerprint": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "completed_at": {"type": "string", "format": "date-time", "pattern": "Z$"}
+  }
+}

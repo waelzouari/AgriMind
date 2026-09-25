@@ -1,4 +1,4 @@
-.PHONY: bootstrap format lint typecheck test backend-format backend-lint backend-typecheck backend-test ai-format ai-lint ai-typecheck ai-test cv-format cv-lint cv-typecheck cv-test db-test secrets repo-check check
+.PHONY: bootstrap format lint typecheck test backend-format backend-lint backend-typecheck backend-test cv-service-format cv-service-lint cv-service-typecheck cv-service-test ai-format ai-lint ai-typecheck ai-test cv-format cv-lint cv-typecheck cv-test db-test secrets repo-check check
 
 bootstrap:
 	python3 -m pip install -e "./edge[dev]"
@@ -6,6 +6,7 @@ bootstrap:
 	python3 -m pip install -e "./backend/services/weather[dev]"
 	python3 -m pip install -e "./ai/irrigation[dev]"
 	python3 -m pip install -e "./ai/computer_vision[dev]"
+	python3 -m pip install -e "./backend/services/cv_inference[dev]"
 
 format:
 	python3 -m ruff format edge/src edge/tests scripts
@@ -31,6 +32,18 @@ backend-typecheck:
 backend-test:
 	python3 -m pytest -q backend/services/ingestion/tests
 	python3 -m pytest -q backend/services/weather/tests
+
+cv-service-format:
+	python3 -m ruff format --check backend/services/cv_inference/src backend/services/cv_inference/tests
+
+cv-service-lint:
+	python3 -m ruff check backend/services/cv_inference/src backend/services/cv_inference/tests
+
+cv-service-typecheck:
+	python3 -m mypy --config-file backend/services/cv_inference/pyproject.toml backend/services/cv_inference/src
+
+cv-service-test:
+	python3 -m pytest -q -c backend/services/cv_inference/pyproject.toml backend/services/cv_inference/tests
 
 ai-format:
 	python3 -m ruff format --check ai/irrigation/src ai/irrigation/tests
@@ -71,4 +84,4 @@ secrets: # pragma: allowlist secret
 repo-check:
 	python3 scripts/check_repository.py
 
-check: lint typecheck test backend-format backend-lint backend-typecheck backend-test ai-format ai-lint ai-typecheck ai-test cv-format cv-lint cv-typecheck cv-test secrets repo-check
+check: lint typecheck test backend-format backend-lint backend-typecheck backend-test cv-service-format cv-service-lint cv-service-typecheck cv-service-test ai-format ai-lint ai-typecheck ai-test cv-format cv-lint cv-typecheck cv-test secrets repo-check

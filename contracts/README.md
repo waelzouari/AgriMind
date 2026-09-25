@@ -13,3 +13,8 @@ canonical JSON serialization for the edge process.
 `ingestion-acknowledgement.schema.json` correlates only telemetry persistence
 results. It is distinct from pump-command acknowledgements and never contains
 the original telemetry payload or credentials.
+
+`cv-inference-response.schema.json` and `cv-inference-error.schema.json` define
+the authenticated, farm-scoped AGM-031 HTTP result boundary. The only visual
+classes are `NORMAL` and `ANOMALY`; the reported anomaly softmax probability is
+not calibrated confidence, a diagnosis, treatment advice, or irrigation input.

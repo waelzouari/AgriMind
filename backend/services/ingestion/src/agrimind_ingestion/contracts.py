@@ -22,6 +22,9 @@ _TOPIC = re.compile(
     rf"(?P<status>status/device)|acks/(?P<command>{_UUID})|"
     rf"(?P<irrigation>events/irrigation_result))$"
 )
+# A maximal canonical v1 device status is 1,471 bytes. Four KiB leaves generous
+# headroom for every current contract while rejecting abusive input before decoding.
+MAX_INBOUND_MQTT_PAYLOAD_BYTES = 4_096
 
 
 class ContractViolation(ValueError):
@@ -121,6 +124,8 @@ class ContractValidator:
         return Draft202012Validator(schema, format_checker=FormatChecker())
 
     def validate(self, identity: TopicIdentity, payload: bytes) -> ValidatedMessage:
+        if len(payload) > MAX_INBOUND_MQTT_PAYLOAD_BYTES:
+            raise ContractViolation("payload_too_large")
         try:
             decoded = payload.decode("utf-8")
             data = json.loads(

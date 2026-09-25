@@ -19,6 +19,9 @@ from agrimind_edge.domain.persistence import EdgeEvent
 from agrimind_edge.domain.pump import PumpDecisionCode
 
 MQTT_QOS_AT_LEAST_ONCE = 1
+# The largest canonical v1 payload is currently a maximal device status at 1,471 bytes.
+# Commands are smaller; 4 KiB preserves generous protocol headroom while bounding decoding.
+MAX_INBOUND_MQTT_PAYLOAD_BYTES = 4_096
 
 
 class MqttAcknowledgementPublisher:
@@ -92,6 +95,9 @@ class MqttPumpCommandProcessor:
             return
         if message.retain:
             self._log_rejection("retained_command", None)
+            return
+        if len(message.payload) > MAX_INBOUND_MQTT_PAYLOAD_BYTES:
+            self._log_rejection("payload_too_large", None)
             return
 
         command_id = self._extract_command_id(message.payload)

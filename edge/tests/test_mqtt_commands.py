@@ -24,6 +24,7 @@ from agrimind_edge.application import (
     SafePumpController,
     TelemetryMapper,
 )
+from agrimind_edge.application.mqtt_commands import MAX_INBOUND_MQTT_PAYLOAD_BYTES
 from agrimind_edge.config import PumpSafetyConfig
 from agrimind_edge.contracts import CommandAcknowledgement, PumpCommand
 from agrimind_edge.contracts.enums import AcknowledgementStatus, DeviceHealth, PumpAction
@@ -277,6 +278,44 @@ def test_uncorrelatable_command_has_no_ack_or_actuation(payload: bytes) -> None:
 
     assert harness.acknowledgements() == []
     assert harness.pump.calls == []
+
+
+@pytest.mark.parametrize(
+    "size", [MAX_INBOUND_MQTT_PAYLOAD_BYTES - 1, MAX_INBOUND_MQTT_PAYLOAD_BYTES]
+)
+def test_command_payload_at_or_below_limit_reaches_validation(size: int) -> None:
+    harness = make_harness()
+    harness.start()
+    payload = command().to_json().encode()
+    padded = payload + (b" " * (size - len(payload)))
+
+    harness.send(padded)
+
+    assert harness.pump.calls.count("turn_on") == 1
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        command().to_json().encode()
+        + b" " * (MAX_INBOUND_MQTT_PAYLOAD_BYTES + 1 - len(command().to_json().encode())),
+        b"\xff" * (MAX_INBOUND_MQTT_PAYLOAD_BYTES + 1),
+    ],
+)
+def test_oversized_command_is_rejected_before_decoding_without_actuation(
+    payload: bytes, caplog: pytest.LogCaptureFixture
+) -> None:
+    logger = logging.getLogger("agrimind.test.oversized-command")
+    caplog.set_level(logging.WARNING, logger=logger.name)
+    harness = make_harness(logger=logger)
+    harness.start()
+
+    harness.send(payload)
+
+    assert harness.acknowledgements() == []
+    assert harness.pump.calls == []
+    assert caplog.records[-1].reason_code == "payload_too_large"
+    assert command().to_json() not in caplog.text
 
 
 def test_logs_do_not_include_untrusted_payload(caplog: pytest.LogCaptureFixture) -> None:

@@ -4,13 +4,14 @@ import json
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
+from unittest.mock import Mock
 from uuid import UUID
 
 import pytest
 from fakes import FakePersistence, FakeRegistry
 
 from agrimind_ingestion.application.ingestion import IngestionService
-from agrimind_ingestion.contracts import ContractValidator
+from agrimind_ingestion.contracts import MAX_INBOUND_MQTT_PAYLOAD_BYTES, ContractValidator
 from agrimind_ingestion.domain import (
     DeviceRegistration,
     IngestionOutcome,
@@ -217,6 +218,49 @@ def test_permanent_validation_rejections(topic: str, payload: bytes, reason: str
     assert result.outcome is IngestionOutcome.REJECTED
     assert result.reason_code == reason
     assert persistence.telemetry == []
+
+
+@pytest.mark.parametrize(
+    "size", [MAX_INBOUND_MQTT_PAYLOAD_BYTES - 1, MAX_INBOUND_MQTT_PAYLOAD_BYTES]
+)
+def test_payload_at_or_below_limit_reaches_contract_validation(size: int) -> None:
+    instance, registry, persistence = service()
+    registry.get = Mock(wraps=registry.get)
+    payload = telemetry_payload()
+    padded = payload + (b" " * (size - len(payload)))
+
+    result = instance.process(telemetry_topic(), padded, qos=1, retain=False)
+
+    assert result.outcome is IngestionOutcome.INSERTED
+    assert registry.get.call_count == 1
+    assert len(persistence.telemetry) == 1
+
+
+@pytest.mark.parametrize(
+    "payload",
+    [
+        telemetry_payload()
+        + b" " * (MAX_INBOUND_MQTT_PAYLOAD_BYTES + 1 - len(telemetry_payload())),
+        b"\xff" * (MAX_INBOUND_MQTT_PAYLOAD_BYTES + 1),
+    ],
+)
+def test_oversized_payload_is_permanently_rejected_before_registry_and_persistence(
+    payload: bytes, caplog: pytest.LogCaptureFixture
+) -> None:
+    instance, registry, persistence = service()
+    registry.get = Mock(wraps=registry.get)
+
+    with caplog.at_level(logging.INFO):
+        result = instance.process(telemetry_topic(), payload, qos=1, retain=False)
+
+    assert result.outcome is IngestionOutcome.REJECTED
+    assert result.reason_code == "payload_too_large"
+    assert result.terminal is True
+    assert result.message_id is None
+    registry.get.assert_not_called()
+    assert persistence.telemetry == []
+    assert caplog.records[-1].reason_code == "payload_too_large"
+    assert telemetry_payload().decode() not in caplog.text
 
 
 def test_unknown_inactive_and_registry_cross_farm_devices_are_rejected() -> None:

@@ -189,6 +189,7 @@ class _LoadedFarm extends StatelessWidget {
                   semanticLabel:
                       '${tree.label}, position ${tree.position.displayLabel}',
                   onTap: () => onTreeSelected(tree),
+                  backgroundColor: AgriMindColors.primaryContainer,
                   child: Column(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [

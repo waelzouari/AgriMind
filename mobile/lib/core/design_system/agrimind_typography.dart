@@ -8,17 +8,17 @@ abstract final class AgriMindTypography {
     fontWeight: FontWeight.w700,
   );
   static const heading1 = TextStyle(
-    fontSize: 32,
+    fontSize: 28,
     height: 1.25,
     fontWeight: FontWeight.w700,
   );
   static const heading2 = TextStyle(
-    fontSize: 24,
+    fontSize: 22,
     height: 1.33,
     fontWeight: FontWeight.w700,
   );
   static const heading3 = TextStyle(
-    fontSize: 20,
+    fontSize: 18,
     height: 1.4,
     fontWeight: FontWeight.w600,
   );
@@ -41,7 +41,7 @@ abstract final class AgriMindTypography {
     fontWeight: FontWeight.w600,
   );
   static const metricValue = TextStyle(
-    fontSize: 32,
+    fontSize: 28,
     height: 1.11,
     fontWeight: FontWeight.w700,
   );

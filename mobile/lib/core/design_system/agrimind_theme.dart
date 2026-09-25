@@ -64,6 +64,43 @@ abstract final class AgriMindTheme {
           side: const BorderSide(color: AgriMindColors.outline),
         ),
       ),
+      navigationBarTheme: NavigationBarThemeData(
+        height: 68,
+        elevation: AgriMindElevation.low,
+        backgroundColor: AgriMindColors.surface,
+        indicatorColor: AgriMindColors.navigationSelected,
+        indicatorShape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AgriMindRadius.pill),
+        ),
+        iconTheme: WidgetStateProperty.resolveWith(
+          (states) => IconThemeData(
+            color: states.contains(WidgetState.selected)
+                ? AgriMindColors.primaryGreen
+                : AgriMindColors.textSecondary,
+          ),
+        ),
+        labelTextStyle: WidgetStateProperty.resolveWith(
+          (states) => AgriMindTypography.caption.copyWith(
+            color: states.contains(WidgetState.selected)
+                ? AgriMindColors.primaryDark
+                : AgriMindColors.textSecondary,
+            fontWeight: states.contains(WidgetState.selected)
+                ? FontWeight.w700
+                : FontWeight.w500,
+          ),
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: AgriMindColors.surface,
+        selectedColor: AgriMindColors.primaryGreen,
+        side: const BorderSide(color: AgriMindColors.outline),
+        shape: RoundedRectangleBorder(borderRadius: radius),
+        labelStyle: AgriMindTypography.caption,
+        secondaryLabelStyle: AgriMindTypography.caption.copyWith(
+          color: AgriMindColors.onPrimary,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           backgroundColor: AgriMindColors.primaryGreen,

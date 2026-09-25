@@ -37,9 +37,9 @@ class AgriMindScaffold extends StatelessWidget {
       body: DecoratedBox(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AgriMindColors.background, AgriMindColors.backgroundSoft],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [AgriMindColors.backgroundSoft, AgriMindColors.background],
           ),
         ),
         child: SafeArea(

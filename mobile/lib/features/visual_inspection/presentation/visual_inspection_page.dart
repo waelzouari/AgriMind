@@ -77,12 +77,11 @@ class _VisualInspectionPageState extends State<VisualInspectionPage> {
               ),
             ),
           ] else
-            const AgriMindCard(
-              child: AgriMindEmptyState(
-                icon: Icons.image_search_rounded,
-                title: 'Aucune image sélectionnée',
-                message: 'Choisissez une photo JPEG ou PNG depuis la galerie.',
-              ),
+            _UploadPrompt(
+              onTap:
+                  widget.controller.status == VisualInspectionStatus.selecting
+                  ? null
+                  : widget.controller.selectImage,
             ),
           const SizedBox(height: AgriMindSpacing.lg),
           if (widget.controller.status == VisualInspectionStatus.analyzing)
@@ -144,6 +143,64 @@ class _VisualInspectionPageState extends State<VisualInspectionPage> {
             ),
           ),
         ],
+      ),
+    ),
+  );
+}
+
+class _UploadPrompt extends StatelessWidget {
+  const _UploadPrompt({required this.onTap});
+
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) => Semantics(
+    label: 'Zone de sélection d’une image de feuille',
+    button: true,
+    child: InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AgriMindRadius.card),
+      child: Ink(
+        padding: const EdgeInsets.symmetric(
+          horizontal: AgriMindSpacing.xl,
+          vertical: AgriMindSpacing.xxl,
+        ),
+        decoration: BoxDecoration(
+          color: AgriMindColors.decorativeGreen,
+          borderRadius: BorderRadius.circular(AgriMindRadius.card),
+          border: Border.all(color: AgriMindColors.primaryGreen),
+        ),
+        child: Column(
+          children: [
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                color: AgriMindColors.surface,
+                shape: BoxShape.circle,
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(AgriMindSpacing.lg),
+                child: Icon(
+                  Icons.eco_rounded,
+                  size: AgriMindIconSizes.hero,
+                  color: AgriMindColors.primaryGreen,
+                ),
+              ),
+            ),
+            const SizedBox(height: AgriMindSpacing.md),
+            Text(
+              'Importer une image de feuille',
+              style: AgriMindTypography.heading3,
+            ),
+            const SizedBox(height: AgriMindSpacing.xs),
+            Text(
+              'Sélectionnez une photo nette au format JPEG ou PNG.',
+              textAlign: TextAlign.center,
+              style: AgriMindTypography.bodySecondary.copyWith(
+                color: AgriMindColors.textSecondary,
+              ),
+            ),
+          ],
+        ),
       ),
     ),
   );

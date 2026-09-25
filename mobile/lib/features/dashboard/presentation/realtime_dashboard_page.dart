@@ -65,6 +65,48 @@ class RealtimeDashboardPage extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: _ConnectionBadge(phase: controller.phase),
           ),
+          const SizedBox(height: AgriMindSpacing.md),
+          AgriMindCard(
+            child: Row(
+              children: [
+                const DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: AgriMindColors.primaryContainer,
+                    shape: BoxShape.circle,
+                  ),
+                  child: Padding(
+                    padding: EdgeInsets.all(AgriMindSpacing.md),
+                    child: Icon(
+                      Icons.eco_rounded,
+                      color: AgriMindColors.primaryGreen,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: AgriMindSpacing.md),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Aperçu de la ferme',
+                        style: AgriMindTypography.label,
+                      ),
+                      const SizedBox(height: AgriMindSpacing.xs),
+                      Text(
+                        controller.phase == MqttConnectionPhase.connected
+                            ? 'Surveillance en temps réel active'
+                            : 'Surveillance en attente de connexion',
+                        style: AgriMindTypography.bodySecondary.copyWith(
+                          color: AgriMindColors.textSecondary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded),
+              ],
+            ),
+          ),
           const SizedBox(height: AgriMindSpacing.xl),
           const AgriMindSectionHeader(title: 'Capteurs en direct'),
           const SizedBox(height: AgriMindSpacing.md),
@@ -133,7 +175,7 @@ class _DashboardBody extends StatelessWidget {
       children: [
         LayoutBuilder(
           builder: (context, constraints) {
-            final columns = constraints.maxWidth >= 520 ? 2 : 1;
+            final columns = constraints.maxWidth >= 340 ? 2 : 1;
             return GridView.builder(
               shrinkWrap: true,
               physics: const NeverScrollableScrollPhysics(),
@@ -142,7 +184,7 @@ class _DashboardBody extends StatelessWidget {
                 crossAxisCount: columns,
                 crossAxisSpacing: AgriMindSpacing.md,
                 mainAxisSpacing: AgriMindSpacing.md,
-                mainAxisExtent: columns == 1 ? 220 : 210,
+                mainAxisExtent: columns == 1 ? 220 : 240,
               ),
               itemBuilder: (context, index) => _MetricCard(
                 reading: readings[index],

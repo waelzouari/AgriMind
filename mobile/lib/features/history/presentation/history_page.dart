@@ -29,6 +29,8 @@ class HistoryPage extends StatefulWidget {
 }
 
 class _HistoryPageState extends State<HistoryPage> {
+  _HistoryFilter _filter = _HistoryFilter.all;
+
   @override
   void initState() {
     super.initState();
@@ -75,6 +77,24 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
           ],
           const SizedBox(height: AgriMindSpacing.xl),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: _HistoryFilter.values
+                  .map(
+                    (filter) => Padding(
+                      padding: const EdgeInsets.only(right: AgriMindSpacing.sm),
+                      child: ChoiceChip(
+                        label: Text(filter.label),
+                        selected: _filter == filter,
+                        onSelected: (_) => setState(() => _filter = filter),
+                      ),
+                    ),
+                  )
+                  .toList(),
+            ),
+          ),
+          const SizedBox(height: AgriMindSpacing.lg),
           switch (widget.controller.status) {
             HistoryStatus.idle ||
             HistoryStatus.loading => const AgriMindLoadingIndicator(
@@ -93,6 +113,7 @@ class _HistoryPageState extends State<HistoryPage> {
             ),
             HistoryStatus.loaded => _HistoryContent(
               snapshot: widget.controller.snapshot,
+              filter: _filter,
             ),
           },
         ],
@@ -101,52 +122,71 @@ class _HistoryPageState extends State<HistoryPage> {
   );
 }
 
+enum _HistoryFilter { all, sensors, irrigation, inspections }
+
+extension on _HistoryFilter {
+  String get label => switch (this) {
+    _HistoryFilter.all => 'Tout',
+    _HistoryFilter.sensors => 'Capteurs',
+    _HistoryFilter.irrigation => 'Irrigation',
+    _HistoryFilter.inspections => 'Inspections',
+  };
+}
+
 class _HistoryContent extends StatelessWidget {
-  const _HistoryContent({required this.snapshot});
+  const _HistoryContent({required this.snapshot, required this.filter});
   final HistorySnapshot snapshot;
+  final _HistoryFilter filter;
   @override
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
     children: [
-      _Section(
-        title: 'Capteurs',
-        icon: Icons.sensors_rounded,
-        empty: snapshot.sensors.isEmpty,
-        children: snapshot.sensors
-            .map(
-              (e) => _Event(
-                title: e.label,
-                value: e.value,
-                timestamp: e.recordedAt,
-              ),
-            )
-            .toList(),
-      ),
-      const SizedBox(height: AgriMindSpacing.xl),
-      _Section(
-        title: 'Irrigation',
-        icon: Icons.water_rounded,
-        empty: snapshot.irrigations.isEmpty,
-        children: snapshot.irrigations
-            .map(
-              (e) => _Event(
-                title: 'Irrigation terminée',
-                value:
-                    '${e.before.toStringAsFixed(0)} % → ${e.after.toStringAsFixed(0)} %',
-                timestamp: e.completedAt,
-              ),
-            )
-            .toList(),
-      ),
-      const SizedBox(height: AgriMindSpacing.xl),
-      _Section(
-        title: 'Inspections visuelles',
-        icon: Icons.image_search_rounded,
-        empty: snapshot.inspections.isEmpty,
-        children: snapshot.inspections
-            .map((e) => _InspectionEvent(entry: e))
-            .toList(),
-      ),
+      if (filter == _HistoryFilter.all || filter == _HistoryFilter.sensors)
+        _Section(
+          title: 'Capteurs',
+          icon: Icons.sensors_rounded,
+          empty: snapshot.sensors.isEmpty,
+          children: snapshot.sensors
+              .map(
+                (e) => _Event(
+                  icon: Icons.sensors_rounded,
+                  title: e.label,
+                  value: e.value,
+                  timestamp: e.recordedAt,
+                ),
+              )
+              .toList(),
+        ),
+      if (filter == _HistoryFilter.all)
+        const SizedBox(height: AgriMindSpacing.xl),
+      if (filter == _HistoryFilter.all || filter == _HistoryFilter.irrigation)
+        _Section(
+          title: 'Irrigation',
+          icon: Icons.water_rounded,
+          empty: snapshot.irrigations.isEmpty,
+          children: snapshot.irrigations
+              .map(
+                (e) => _Event(
+                  icon: Icons.water_drop_rounded,
+                  title: 'Irrigation terminée',
+                  value:
+                      '${e.before.toStringAsFixed(0)} % → ${e.after.toStringAsFixed(0)} %',
+                  timestamp: e.completedAt,
+                ),
+              )
+              .toList(),
+        ),
+      if (filter == _HistoryFilter.all)
+        const SizedBox(height: AgriMindSpacing.xl),
+      if (filter == _HistoryFilter.all || filter == _HistoryFilter.inspections)
+        _Section(
+          title: 'Inspections visuelles',
+          icon: Icons.image_search_rounded,
+          empty: snapshot.inspections.isEmpty,
+          children: snapshot.inspections
+              .map((e) => _InspectionEvent(entry: e))
+              .toList(),
+        ),
     ],
   );
 }
@@ -186,10 +226,12 @@ class _Section extends StatelessWidget {
 
 class _Event extends StatelessWidget {
   const _Event({
+    required this.icon,
     required this.title,
     required this.value,
     required this.timestamp,
   });
+  final IconData icon;
   final String title;
   final String value;
   final DateTime timestamp;
@@ -197,6 +239,17 @@ class _Event extends StatelessWidget {
   Widget build(BuildContext context) => AgriMindCard(
     child: Row(
       children: [
+        DecoratedBox(
+          decoration: const BoxDecoration(
+            color: AgriMindColors.primaryContainer,
+            shape: BoxShape.circle,
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(AgriMindSpacing.sm),
+            child: Icon(icon, color: AgriMindColors.primaryGreen),
+          ),
+        ),
+        const SizedBox(width: AgriMindSpacing.md),
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -227,6 +280,20 @@ class _InspectionEvent extends StatelessWidget {
       children: [
         Row(
           children: [
+            const DecoratedBox(
+              decoration: BoxDecoration(
+                color: AgriMindColors.primaryContainer,
+                shape: BoxShape.circle,
+              ),
+              child: Padding(
+                padding: EdgeInsets.all(AgriMindSpacing.sm),
+                child: Icon(
+                  Icons.image_search_rounded,
+                  color: AgriMindColors.primaryGreen,
+                ),
+              ),
+            ),
+            const SizedBox(width: AgriMindSpacing.sm),
             Expanded(
               child: Text(entry.treeLabel, style: AgriMindTypography.label),
             ),

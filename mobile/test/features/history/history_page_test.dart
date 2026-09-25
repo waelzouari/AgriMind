@@ -89,8 +89,8 @@ void main() {
     );
     await tester.pumpWidget(_app(repository, demo: true));
     await tester.pumpAndSettle();
-    expect(find.text('Capteurs'), findsOneWidget);
-    expect(find.text('Irrigation'), findsOneWidget);
+    expect(find.text('Capteurs'), findsNWidgets(2));
+    expect(find.text('Irrigation'), findsNWidgets(2));
     expect(find.text('Inspections visuelles'), findsOneWidget);
     expect(find.text('ANOMALY'), findsOneWidget);
     expect(find.textContaining('score non calibré'), findsOneWidget);

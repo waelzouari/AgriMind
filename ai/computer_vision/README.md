@@ -151,3 +151,15 @@ demonstrate equivalent performance on real field images. Expected domain shift
 includes natural backgrounds, lighting, blur, occlusion, multiple leaves,
 camera differences, unseen cultivars or species, and Tunisian farm conditions.
 No quantitative field-performance or disease-diagnosis claim is made.
+
+## AGM-031 Phase B1 boundary
+
+The package now owns dependency-light binary metrics, validation-only threshold
+selection and strict runtime artifact verification. Threshold selection accepts
+only a `ValidationScores` contract; the held-out evaluator requires frozen
+model, preprocessing and threshold evidence plus validation/artifact identity.
+The runtime constructs MobileNetV2 with `weights=None`, verifies the external
+artifact before loading a strict state dict, and never downloads weights.
+
+Official clean weights, the selected threshold and held-out TEST metrics remain
+pending Phase B2. No final evaluation result is claimed by the B1 code or tests.

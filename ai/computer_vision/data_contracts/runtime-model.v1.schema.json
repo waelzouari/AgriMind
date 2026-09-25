@@ -1,0 +1,31 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agrimind.example/ai/computer-vision/runtime-model.v1.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "model_version", "architecture", "label_mapping",
+    "preprocessing_version", "dataset_fingerprint", "split_fingerprint",
+    "artifact_path", "artifact_size_bytes", "artifact_sha256",
+    "decision_threshold", "validation_fingerprint"
+  ],
+  "properties": {
+    "schema_version": {"const": 1},
+    "model_version": {"type": "string", "minLength": 1},
+    "architecture": {"const": "mobilenet_v2"},
+    "label_mapping": {
+      "type": "object", "additionalProperties": false,
+      "required": ["NORMAL", "ANOMALY"],
+      "properties": {"NORMAL": {"const": 0}, "ANOMALY": {"const": 1}}
+    },
+    "preprocessing_version": {"const": "agrimind-cv-mobilenet-v2-preprocessing-v1"},
+    "dataset_fingerprint": {"$ref": "#/$defs/sha256"},
+    "split_fingerprint": {"$ref": "#/$defs/sha256"},
+    "artifact_path": {"type": "string", "minLength": 1},
+    "artifact_size_bytes": {"type": "integer", "minimum": 1},
+    "artifact_sha256": {"$ref": "#/$defs/sha256"},
+    "decision_threshold": {"type": "number", "minimum": 0, "maximum": 1},
+    "validation_fingerprint": {"$ref": "#/$defs/sha256"}
+  },
+  "$defs": {"sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"}}
+}

@@ -10,3 +10,8 @@ AGM-012 adds restricted trusted-ingestion RPCs plus the independently deployed
 service under `services/ingestion/`. AGM-019 adds the independently deployed
 Open-Meteo aggregation and persistent cache worker under `services/weather/`.
 Privileged runtime values are never stored in this repository.
+
+AGM-031 adds `services/cv_inference/` as an independently deployable,
+authenticated and farm-scoped inference boundary. It validates users through
+Supabase Auth and checks memberships using the user's own JWT under RLS; user
+inference never requires `service_role`.

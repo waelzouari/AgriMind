@@ -120,6 +120,9 @@ hard duration and hardware safety limits.
 - MQTT is transport, never durable business storage.
 - The model recommendation is advisory input; the edge safety gate owns the
   final actuation decision.
+- The P1 CV service is a separate authenticated, farm-scoped visual-screening
+  boundary. It returns only `NORMAL` or `ANOMALY`, never persists request images
+  in AGM-031, and has no path to MQTT, Edge actuation or irrigation decisions.
 - AGM-024 implements that separation as one explicit, opt-in automatic cycle.
   The independent gate rechecks local sensor health, pump state, and an AI-only
   cooldown before the request reaches the existing AGM-005 handler. Weather and

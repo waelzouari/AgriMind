@@ -1,0 +1,1 @@
+"""CV inference domain types."""

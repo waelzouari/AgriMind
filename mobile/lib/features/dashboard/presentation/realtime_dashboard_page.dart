@@ -19,6 +19,7 @@ class RealtimeDashboardPage extends StatelessWidget {
     required this.controller,
     required this.weatherController,
     required this.onOpenFarm,
+    this.onOpenHistory,
     super.key,
   });
   final AuthenticationController authentication;
@@ -26,6 +27,7 @@ class RealtimeDashboardPage extends StatelessWidget {
   final DashboardController controller;
   final WeatherController weatherController;
   final VoidCallback onOpenFarm;
+  final VoidCallback? onOpenHistory;
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -46,6 +48,7 @@ class RealtimeDashboardPage extends StatelessWidget {
         selectedIndex: 0,
         onHome: () {},
         onFarm: onOpenFarm,
+        onHistory: onOpenHistory,
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

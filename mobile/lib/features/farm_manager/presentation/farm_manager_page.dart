@@ -18,6 +18,7 @@ class FarmManagerPage extends StatefulWidget {
     required this.repository,
     this.cvInferenceRepository,
     this.inspectionImageSource,
+    this.onOpenHistory,
     super.key,
   });
 
@@ -25,6 +26,7 @@ class FarmManagerPage extends StatefulWidget {
   final FarmManagerRepository repository;
   final CvInferenceRepository? cvInferenceRepository;
   final InspectionImageSource? inspectionImageSource;
+  final VoidCallback? onOpenHistory;
 
   @override
   State<FarmManagerPage> createState() => _FarmManagerPageState();
@@ -56,6 +58,7 @@ class _FarmManagerPageState extends State<FarmManagerPage> {
         selectedIndex: 1,
         onHome: () => Navigator.of(context).pop(),
         onFarm: () {},
+        onHistory: widget.onOpenHistory,
       ),
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,

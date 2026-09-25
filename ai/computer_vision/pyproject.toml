@@ -1,0 +1,48 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agrimind-cv"
+version = "0.2.0"
+description = "AgriMind reproducible computer-vision dataset and training pipeline"
+requires-python = ">=3.11"
+dependencies = [
+  "numpy>=2.0,<3",
+  "Pillow>=11,<13",
+  "jsonschema[format]>=4.23,<5",
+]
+
+[project.optional-dependencies]
+train = [
+  "torch==2.5.1",
+  "torchvision==0.20.1",
+]
+dev = [
+  "mypy>=1.11,<2",
+  "pytest>=8.3,<9",
+  "ruff>=0.9,<1",
+]
+
+[project.scripts]
+agrimind-cv = "agrimind_cv.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+addopts = "--strict-config --strict-markers -q"
+testpaths = ["tests"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B", "SIM", "RUF"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+warn_unused_configs = true
+files = ["src"]

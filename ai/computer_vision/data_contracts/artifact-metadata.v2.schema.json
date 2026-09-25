@@ -1,0 +1,160 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://agrimind.example/ai/computer-vision/artifact-metadata.v2.schema.json",
+  "title": "AgriMind computer-vision artifact metadata v2",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version", "artifact_id", "artifact_version", "created_at",
+    "code_revision", "git_dirty", "artifact", "selected_model", "architecture",
+    "pretrained_weights", "label_map_version", "label_mapping",
+    "preprocessing_contract_version", "dataset", "related_manifest_fingerprint",
+    "split", "training", "runtime", "evaluation"
+  ],
+  "properties": {
+    "schema_version": {"const": 2},
+    "artifact_id": {"type": "string", "pattern": "^[a-z0-9][a-z0-9._-]+$"},
+    "artifact_version": {"type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"},
+    "created_at": {"type": "string", "format": "date-time", "pattern": "Z$"},
+    "code_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+    "git_dirty": {"type": "boolean"},
+    "artifact": {
+      "type": "object", "additionalProperties": false,
+      "required": ["format", "path", "size_bytes", "sha256"],
+      "properties": {
+        "format": {"enum": ["pytorch_state_dict", "mean_rgb_centroids_v1"]},
+        "path": {"type": "string", "minLength": 1},
+        "size_bytes": {"type": "integer", "minimum": 1},
+        "sha256": {"$ref": "#/$defs/sha256"}
+      }
+    },
+    "selected_model": {"enum": ["mean_rgb_centroid_baseline", "mobilenet_v2"]},
+    "architecture": {"enum": ["mean_rgb_centroid", "mobilenet_v2"]},
+    "pretrained_weights": {"type": ["string", "null"]},
+    "label_map_version": {"const": "agrimind-cv-binary-label-map-v1"},
+    "label_mapping": {
+      "type": "object", "additionalProperties": false,
+      "required": ["NORMAL", "ANOMALY"],
+      "properties": {"NORMAL": {"const": 0}, "ANOMALY": {"const": 1}}
+    },
+    "preprocessing_contract_version": {
+      "enum": [
+        "agrimind-cv-mobilenet-v2-preprocessing-v1",
+        "agrimind-cv-mean-rgb-32-v1"
+      ]
+    },
+    "dataset": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "version", "fingerprint", "config_sha256", "source_verification", "source_evidence"],
+      "properties": {
+        "id": {"type": "string", "minLength": 1},
+        "version": {"type": "string", "minLength": 1},
+        "fingerprint": {"$ref": "#/$defs/sha256"},
+        "config_sha256": {"$ref": "#/$defs/sha256"},
+        "source_verification": {"const": "VERIFIED"},
+        "source_evidence": {
+          "type": "object", "additionalProperties": false,
+          "required": ["schema_version", "status", "method", "source_url", "source_revision", "observed_revision", "archive_sha256", "evidence_path", "detail"],
+          "properties": {
+            "schema_version": {"const": 1},
+            "status": {"const": "VERIFIED"},
+            "method": {"enum": ["git_checkout", "archive_sha256", "versioned_record"]},
+            "source_url": {"type": "string", "minLength": 1},
+            "source_revision": {"type": "string", "pattern": "^[0-9a-f]{40}$"},
+            "observed_revision": {"type": ["string", "null"], "pattern": "^[0-9a-f]{40}$"},
+            "archive_sha256": {"anyOf": [{"$ref": "#/$defs/sha256"}, {"type": "null"}]},
+            "evidence_path": {"type": ["string", "null"]},
+            "detail": {"type": "string", "minLength": 1}
+          }
+        }
+      }
+    },
+    "related_manifest_fingerprint": {"$ref": "#/$defs/sha256"},
+    "split": {
+      "type": "object", "additionalProperties": false,
+      "required": ["contract_version", "fingerprint", "seed", "ratios", "counts", "class_counts"],
+      "properties": {
+        "contract_version": {"const": "agrimind-cv-group-split-v1"},
+        "fingerprint": {"$ref": "#/$defs/sha256"},
+        "seed": {"type": "integer", "minimum": 0},
+        "ratios": {"type": "object"},
+        "counts": {"$ref": "#/$defs/partitionCounts"},
+        "class_counts": {
+          "type": "object", "additionalProperties": false,
+          "required": ["TRAIN", "VALIDATION", "TEST"],
+          "properties": {
+            "TRAIN": {"$ref": "#/$defs/classCounts"},
+            "VALIDATION": {"$ref": "#/$defs/classCounts"},
+            "TEST": {"$ref": "#/$defs/classCounts"}
+          }
+        }
+      }
+    },
+    "training": {
+      "type": "object", "additionalProperties": false,
+      "required": ["config_version", "config_sha256", "random_seed", "resolved_config", "outcome"],
+      "properties": {
+        "config_version": {"const": "agrimind-cv-mobilenet-v2-training-v1"},
+        "config_sha256": {"$ref": "#/$defs/sha256"},
+        "random_seed": {"type": "integer", "minimum": 0},
+        "resolved_config": {"type": "object"},
+        "outcome": {
+          "type": "object", "additionalProperties": false,
+          "required": ["epochs_executed", "best_epoch", "stopped_early", "class_weights", "duration_seconds"],
+          "properties": {
+            "epochs_executed": {"type": "integer", "minimum": 1},
+            "best_epoch": {"type": "integer", "minimum": 1},
+            "stopped_early": {"type": "boolean"},
+            "class_weights": {
+              "type": "array", "prefixItems": [{"type": "number", "exclusiveMinimum": 0}, {"type": "number", "exclusiveMinimum": 0}], "items": false
+            },
+            "duration_seconds": {"type": "number", "exclusiveMinimum": 0}
+          }
+        }
+      }
+    },
+    "runtime": {
+      "type": "object", "additionalProperties": false,
+      "required": ["python", "numpy", "pillow", "torch", "torchvision", "platform", "device", "cuda", "cudnn", "deterministic_settings"],
+      "properties": {
+        "python": {"type": "string"}, "numpy": {"type": "string"},
+        "pillow": {"type": "string"}, "torch": {"type": "string"},
+        "torchvision": {"type": "string"}, "platform": {"type": "string"},
+        "device": {"type": "string"}, "cuda": {"type": ["string", "null"]},
+        "cudnn": {"type": ["integer", "null"]}, "deterministic_settings": {"type": "object"}
+      }
+    },
+    "evaluation": {
+      "type": "object", "additionalProperties": false,
+      "required": ["baseline_validation", "candidate_validation", "selection_rule_version", "selection_reason", "test_evaluated", "threshold_selection"],
+      "properties": {
+        "baseline_validation": {"type": "object"},
+        "candidate_validation": {"type": "object"},
+        "selection_rule_version": {"const": "agrimind-cv-validation-selection-v1"},
+        "selection_reason": {"type": "string", "minLength": 1},
+        "test_evaluated": {"const": false},
+        "threshold_selection": {"const": "DEFERRED_TO_AGM_031"}
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+    "partitionCounts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["TRAIN", "VALIDATION", "TEST"],
+      "properties": {
+        "TRAIN": {"type": "integer", "minimum": 1},
+        "VALIDATION": {"type": "integer", "minimum": 1},
+        "TEST": {"type": "integer", "minimum": 1}
+      }
+    },
+    "classCounts": {
+      "type": "object", "additionalProperties": false,
+      "required": ["NORMAL", "ANOMALY"],
+      "properties": {
+        "NORMAL": {"type": "integer", "minimum": 1},
+        "ANOMALY": {"type": "integer", "minimum": 1}
+      }
+    }
+  }
+}

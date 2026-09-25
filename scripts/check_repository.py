@@ -22,6 +22,10 @@ REQUIRED_PATHS = (
     "docs/configuration.md",
     "docs/mqtt/topics.md",
     "edge/pyproject.toml",
+    "ai/computer_vision/pyproject.toml",
+    "ai/computer_vision/configs/datasets/plantvillage-notebook-mirror-v1.json",
+    "ai/computer_vision/data_contracts/artifact-metadata.v2.schema.json",
+    "ai/computer_vision/README.md",
     "mobile/README.md",
 )
 FORBIDDEN_ENV_NAMES = ("SERVICE_ROLE", "PRIVATE_KEY")

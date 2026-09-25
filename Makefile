@@ -1,10 +1,11 @@
-.PHONY: bootstrap format lint typecheck test backend-format backend-lint backend-typecheck backend-test ai-format ai-lint ai-typecheck ai-test db-test secrets repo-check check
+.PHONY: bootstrap format lint typecheck test backend-format backend-lint backend-typecheck backend-test ai-format ai-lint ai-typecheck ai-test cv-format cv-lint cv-typecheck cv-test db-test secrets repo-check check
 
 bootstrap:
 	python3 -m pip install -e "./edge[dev]"
 	python3 -m pip install -e "./backend/services/ingestion[dev]"
 	python3 -m pip install -e "./backend/services/weather[dev]"
 	python3 -m pip install -e "./ai/irrigation[dev]"
+	python3 -m pip install -e "./ai/computer_vision[dev]"
 
 format:
 	python3 -m ruff format edge/src edge/tests scripts
@@ -43,6 +44,18 @@ ai-typecheck:
 ai-test:
 	python3 -m pytest -q ai/irrigation/tests
 
+cv-format:
+	python3 -m ruff format --check ai/computer_vision/src ai/computer_vision/tests
+
+cv-lint:
+	python3 -m ruff check ai/computer_vision/src ai/computer_vision/tests
+
+cv-typecheck:
+	python3 -m mypy --config-file ai/computer_vision/pyproject.toml ai/computer_vision/src
+
+cv-test:
+	python3 -m pytest -q -c ai/computer_vision/pyproject.toml ai/computer_vision/tests
+
 typecheck:
 	python3 -m mypy edge/src scripts
 
@@ -58,4 +71,4 @@ secrets: # pragma: allowlist secret
 repo-check:
 	python3 scripts/check_repository.py
 
-check: lint typecheck test backend-format backend-lint backend-typecheck backend-test ai-format ai-lint ai-typecheck ai-test secrets repo-check
+check: lint typecheck test backend-format backend-lint backend-typecheck backend-test ai-format ai-lint ai-typecheck ai-test cv-format cv-lint cv-typecheck cv-test secrets repo-check

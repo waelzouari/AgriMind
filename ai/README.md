@@ -24,3 +24,10 @@ semantics are documented in
 Tank level, pump status, and sensor status are system state and are excluded
 from agronomic ML features. Computer vision is limited to `NORMAL` and
 `VISUAL_ANOMALY_DETECTED`; disease diagnosis and robot autonomy are excluded.
+
+AGM-030 adds the separate training label contract `NORMAL` / `ANOMALY`, a
+verified-source dataset audit, conservative related-image quarantine, replayable
+group-aware splits, a simple baseline, and validation-only MobileNetV2 model
+selection. It does not add an inference API or alter the established downstream
+event vocabulary. See
+[`computer_vision/README.md`](computer_vision/README.md).

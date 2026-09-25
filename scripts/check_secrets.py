@@ -27,7 +27,7 @@ def main() -> int:
             "--exclude-files",
             r"^\.git/",
             "--exclude-lines",
-            r'^\s*"dataset_sha256":\s*"[0-9A-Fa-f]{64}",?\s*$',
+            r'"(?:dataset_sha256|dataset_version|source_revision|sha256)"',
         ],
         cwd=ROOT,
         check=True,

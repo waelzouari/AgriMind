@@ -113,6 +113,10 @@ fakes. Ordinary CI never connects to HiveMQ or requires physical hardware.
   fingerprint, code commit, and evaluation report together.
 - CV adds subject/source-aware splits, domain-shift tests using demo-plant
   photos, low-confidence behavior, image validation, and latency.
+- AGM-030 ordinary CI uses only generated images to test source-evidence
+  handling, exact/near-duplicate quarantine, deterministic manifests and
+  splits, preprocessing, validation-only selection, and artifact metadata.
+  It never downloads PlantVillage or runs full MobileNetV2 training.
 
 ## Failure and safety matrix
 

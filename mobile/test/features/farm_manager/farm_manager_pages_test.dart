@@ -9,6 +9,11 @@ import 'package:agrimind/features/farm_manager/domain/tree_position.dart';
 import 'package:agrimind/features/farm_manager/presentation/farm_manager_page.dart';
 import 'package:agrimind/features/farm_manager/presentation/tree_detail_page.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
+import 'package:agrimind/features/visual_inspection/application/cv_inference_repository.dart';
+import 'package:agrimind/features/visual_inspection/application/inspection_image_source.dart';
+import 'package:agrimind/features/visual_inspection/domain/cv_inference_result.dart';
+import 'package:agrimind/features/visual_inspection/domain/inspection_image.dart';
+import 'package:agrimind/features/visual_inspection/presentation/visual_inspection_page.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -71,6 +76,20 @@ final class _WrongFarmRepository implements FarmManagerRepository {
 
   @override
   Future<List<FarmTree>> listTrees(String farmId) async => const [];
+}
+
+final class _UnusedImageSource implements InspectionImageSource {
+  @override
+  Future<InspectionImage?> selectFromGallery() async => null;
+}
+
+final class _UnusedInferenceRepository implements CvInferenceRepository {
+  @override
+  Future<CvInferenceResult> analyze({
+    required String farmId,
+    required String treeId,
+    required InspectionImage image,
+  }) => throw UnimplementedError();
 }
 
 void main() {
@@ -141,6 +160,34 @@ void main() {
     await tester.tap(find.byType(BackButton));
     await tester.pumpAndSettle();
     expect(find.byType(FarmManagerPage), findsOneWidget);
+  });
+
+  testWidgets('tree detail opens the scoped visual inspection flow', (
+    tester,
+  ) async {
+    final repository = FakeFarmManagerRepository(trees: const [treeA1]);
+    await tester.pumpWidget(
+      testApp(
+        FarmManagerPage(
+          farm: farm,
+          repository: repository,
+          cvInferenceRepository: _UnusedInferenceRepository(),
+          inspectionImageSource: _UnusedImageSource(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(Key('farm-tree-${treeA1.id}')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.text('Démarrer une inspection visuelle'));
+    await tester.tap(find.text('Démarrer une inspection visuelle'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(VisualInspectionPage), findsOneWidget);
+    expect(find.text('Olivier A1'), findsOneWidget);
+    expect(find.textContaining('Ferme de Sfax · Position A1'), findsOneWidget);
+    expect(find.textContaining('résultat est simulé'), findsOneWidget);
   });
 
   testWidgets('Farm Manager maps repository failure to safe retry state', (

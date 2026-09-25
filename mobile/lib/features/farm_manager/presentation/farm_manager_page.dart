@@ -8,17 +8,23 @@ import 'package:agrimind/features/farm_manager/domain/farm_tree.dart';
 import 'package:agrimind/features/farm_manager/presentation/farm_navigation_bar.dart';
 import 'package:agrimind/features/farm_manager/presentation/tree_detail_page.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
+import 'package:agrimind/features/visual_inspection/application/cv_inference_repository.dart';
+import 'package:agrimind/features/visual_inspection/application/inspection_image_source.dart';
 import 'package:flutter/material.dart';
 
 class FarmManagerPage extends StatefulWidget {
   const FarmManagerPage({
     required this.farm,
     required this.repository,
+    this.cvInferenceRepository,
+    this.inspectionImageSource,
     super.key,
   });
 
   final Farm farm;
   final FarmManagerRepository repository;
+  final CvInferenceRepository? cvInferenceRepository;
+  final InspectionImageSource? inspectionImageSource;
 
   @override
   State<FarmManagerPage> createState() => _FarmManagerPageState();
@@ -78,6 +84,8 @@ class _FarmManagerPageState extends State<FarmManagerPage> {
                   farm: widget.farm,
                   treeId: tree.id,
                   repository: widget.repository,
+                  cvInferenceRepository: widget.cvInferenceRepository,
+                  inspectionImageSource: widget.inspectionImageSource,
                 ),
               ),
             ),

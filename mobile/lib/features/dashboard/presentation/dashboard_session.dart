@@ -6,6 +6,8 @@ import 'package:agrimind/features/dashboard/presentation/realtime_dashboard_page
 import 'package:agrimind/features/farm_manager/application/farm_manager_repository.dart';
 import 'package:agrimind/features/farm_manager/presentation/farm_manager_page.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
+import 'package:agrimind/features/visual_inspection/infrastructure/demo_cv_inference_repository.dart';
+import 'package:agrimind/features/visual_inspection/infrastructure/gallery_inspection_image_source.dart';
 import 'package:agrimind/features/weather/application/weather_controller.dart';
 import 'package:flutter/material.dart';
 
@@ -84,6 +86,8 @@ class _DashboardSessionState extends State<DashboardSession> {
         builder: (_) => FarmManagerPage(
           farm: widget.farm,
           repository: widget.farmManagerRepository,
+          cvInferenceRepository: const DemoCvInferenceRepository(),
+          inspectionImageSource: GalleryInspectionImageSource(),
         ),
       ),
     ),

@@ -55,6 +55,13 @@ inspection, and activity remain explicitly unavailable; the disabled inspection
 action does not provide camera or Computer Vision behavior. The Home/Farm
 navigation exposes only implemented destinations.
 
+AGM-034 adds the History presentation boundary for farm-scoped sensor,
+irrigation, and visual-inspection events. Until AGM-032 finalizes private image
+and inspection metadata persistence, the runtime history adapter is explicitly
+demonstration-only and must never be presented as cloud or model evidence. The
+repository boundary remains injectable so an RLS-backed implementation can
+replace it without changing the loading, empty, error, retry, or populated UI.
+
 ## Safety and inference semantics
 
 Future irrigation may visually group Manual, Automatic, and Scheduled modes,

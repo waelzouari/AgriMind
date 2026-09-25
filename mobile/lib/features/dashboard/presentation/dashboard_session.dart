@@ -5,6 +5,9 @@ import 'package:agrimind/features/dashboard/application/dashboard_controller.dar
 import 'package:agrimind/features/dashboard/presentation/realtime_dashboard_page.dart';
 import 'package:agrimind/features/farm_manager/application/farm_manager_repository.dart';
 import 'package:agrimind/features/farm_manager/presentation/farm_manager_page.dart';
+import 'package:agrimind/features/history/application/history_controller.dart';
+import 'package:agrimind/features/history/infrastructure/demo_history_repository.dart';
+import 'package:agrimind/features/history/presentation/history_page.dart';
 import 'package:agrimind/features/onboarding/domain/farm.dart';
 import 'package:agrimind/features/visual_inspection/infrastructure/demo_cv_inference_repository.dart';
 import 'package:agrimind/features/visual_inspection/infrastructure/gallery_inspection_image_source.dart';
@@ -75,21 +78,43 @@ class _DashboardSessionState extends State<DashboardSession> {
     super.dispose();
   }
 
+  void _openFarm(BuildContext context) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => FarmManagerPage(
+        farm: widget.farm,
+        repository: widget.farmManagerRepository,
+        cvInferenceRepository: const DemoCvInferenceRepository(),
+        inspectionImageSource: GalleryInspectionImageSource(),
+        onOpenHistory: () => _openHistory(context),
+      ),
+    ),
+  );
+
+  void _openHistory(BuildContext context) => Navigator.of(context).push(
+    MaterialPageRoute<void>(
+      builder: (_) => HistoryPage(
+        farm: widget.farm,
+        demonstrationMode: true,
+        controller: HistoryController(
+          farmId: widget.farm.id,
+          repository: const DemoHistoryRepository(),
+        ),
+        onHome: () => Navigator.of(context).popUntil((route) => route.isFirst),
+        onFarm: () {
+          Navigator.of(context).popUntil((route) => route.isFirst);
+          _openFarm(context);
+        },
+      ),
+    ),
+  );
+
   @override
   Widget build(BuildContext context) => RealtimeDashboardPage(
     authentication: widget.authentication,
     farm: widget.farm,
     controller: _controller,
     weatherController: _weatherController,
-    onOpenFarm: () => Navigator.of(context).push(
-      MaterialPageRoute<void>(
-        builder: (_) => FarmManagerPage(
-          farm: widget.farm,
-          repository: widget.farmManagerRepository,
-          cvInferenceRepository: const DemoCvInferenceRepository(),
-          inspectionImageSource: GalleryInspectionImageSource(),
-        ),
-      ),
-    ),
+    onOpenFarm: () => _openFarm(context),
+    onOpenHistory: () => _openHistory(context),
   );
 }
